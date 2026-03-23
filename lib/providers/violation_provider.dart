@@ -6,18 +6,119 @@ import '../services/database_service.dart';
 class ViolationProvider with ChangeNotifier {
   List<Violation> _violations = [];
   List<User> _students = [];
+  List<User> _users = [];
   bool _isLoading = false;
   String? _error;
 
-  List<Violation> get violations => _violations;
-  List<User> get students => _students;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
+  // Student-specific data
+  String _warningLevel = 'green';
+  int _pendingCount  = 0;
+  int _approvedCount = 0;
+  int _rejectedCount = 0;
+  int _totalCount    = 0;
+  String? _studentQrCode;
+  Map<String, dynamic> _studentProfile = {};
 
+  // Guard-specific data
+  Map<String, dynamic> _validatedStudent = {};
+  Map<String, dynamic> _violationSummary = {};
+
+  // SAO-specific data
+  Map<String, dynamic> _saoSummary = {};
+  Map<String, dynamic> _studentReport = {};
+
+  // Getters
+  List<Violation> get violations   => _violations;
+  List<User> get students          => _students;
+  List<User> get users             => _users;
+  bool get isLoading               => _isLoading;
+  String? get error                => _error;
+  String get warningLevel          => _warningLevel;
+  int get pendingCount             => _pendingCount;
+  int get approvedCount            => _approvedCount;
+  int get rejectedCount            => _rejectedCount;
+  int get totalCount               => _totalCount;
+  String? get studentQrCode        => _studentQrCode;
+  Map<String, dynamic> get studentProfile   => _studentProfile;
+  Map<String, dynamic> get validatedStudent => _validatedStudent;
+  Map<String, dynamic> get violationSummary => _violationSummary;
+  Map<String, dynamic> get saoSummary       => _saoSummary;
+  Map<String, dynamic> get studentReport    => _studentReport;
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // STUDENT METHODS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // GET /api/student/violations
+  // Loads own violations + counts + warning level
+  Future<void> loadMyViolations() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await DatabaseService.getMyViolations();
+      if (result.isNotEmpty) {
+        _violations    = List<Violation>.from(result['violations'] ?? []);
+        _pendingCount  = result['pending']  ?? 0;
+        _approvedCount = result['approved'] ?? 0;
+        _rejectedCount = result['rejected'] ?? 0;
+        _totalCount    = result['total_violations'] ?? 0;
+        _warningLevel  = result['warning_level'] ?? 'green';
+      }
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load violations: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/student/profile
+  // Loads own profile info
+  Future<void> loadMyProfile() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _studentProfile = await DatabaseService.getMyProfile();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load profile: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/student/qrcode
+  // Loads own QR code
+  Future<void> loadMyQrCode() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _studentQrCode = await DatabaseService.getMyQrCode();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load QR code: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Legacy — kept for compatibility with existing screens
+  Future<void> loadStudentViolations(String studentId) async {
+    await loadMyViolations();
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // GUARD METHODS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // GET /api/guard/students
+  // Load all students for dropdown
   Future<void> loadStudents() async {
     _setLoading(true);
     _error = null;
-
     try {
       _students = await DatabaseService.getAllStudents();
       notifyListeners();
@@ -29,12 +130,83 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  Future<void> loadStudentViolations(String studentId) async {
+  // GET /api/guard/students/{studentNo}
+  // Search specific student by StudentNo
+  Future<Map<String, dynamic>?> searchStudent(String studentNo) async {
     _setLoading(true);
     _error = null;
-
     try {
-      _violations = await DatabaseService.getStudentViolations(studentId);
+      final result = await DatabaseService.getStudentByStudentNo(studentNo);
+      notifyListeners();
+      return result;
+    } catch (e) {
+      _error = 'Student not found: ${e.toString()}';
+      notifyListeners();
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guard/student/validate?studentNo=xxx
+  // Validate student by QR code scan
+  Future<void> validateStudent(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await DatabaseService.validateStudent(studentNo);
+      _validatedStudent = result ?? {};
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to validate student: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // POST /api/guard/student/violation
+  // Record a new violation
+  Future<void> recordViolation({
+    required String studentId,
+    required ViolationType type,
+    required String reportedBy,
+    String? remarks,
+    String? severity,
+  }) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final violation = Violation(
+        id:            DateTime.now().millisecondsSinceEpoch.toString(),
+        studentId:     studentId,
+        type:          type,
+        date:          DateTime.now(),
+        remarks:       remarks,
+        status:        ViolationStatus.warning,
+        offenseCount:  1,
+        reportedBy:    reportedBy,
+        violationName: _violationTypeToString(type),
+        severity:      severity ?? 'minor',
+      );
+      await DatabaseService.addViolation(violation);
+      await loadAllViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to record violation: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guard/violations/student?studentNo=xxx
+  // View all violations of a specific student
+  Future<void> loadViolationsByStudent(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _violations = await DatabaseService.getViolationsByStudent(studentNo);
       notifyListeners();
     } catch (e) {
       _error = 'Failed to load violations: ${e.toString()}';
@@ -44,10 +216,65 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
+  // GET /api/guard/violations/summary?StartDate=xxx&EndDate=xxx
+  // Get violation summary for a date range
+  Future<void> loadViolationSummary(String startDate, String endDate) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _violationSummary = await DatabaseService.getViolationSummary(startDate, endDate);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load summary: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // GUIDANCE METHODS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // GET /api/guidance/students
+  // Load all students
+  Future<void> loadGuidanceStudents() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _students = await DatabaseService.getGuidanceStudents();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load students: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guidance/students/{studentNo}
+  // Get one specific student
+  Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await DatabaseService.getGuidanceStudent(studentNo);
+      notifyListeners();
+      return result;
+    } catch (e) {
+      _error = 'Failed to get student: ${e.toString()}';
+      notifyListeners();
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guidance/violations
+  // Load all violations
   Future<void> loadAllViolations() async {
     _setLoading(true);
     _error = null;
-
     try {
       _violations = await DatabaseService.getAllViolations();
       notifyListeners();
@@ -59,66 +286,226 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  Future<void> recordViolation({
-    required String studentId,
-    required ViolationType type,
-    required String reportedBy,
-    String? remarks,
-  }) async {
+  // PUT /api/guidance/violations/{id}/resolve
+  // Resolve a violation
+  Future<void> resolveViolation(String violationId) async {
     _setLoading(true);
     _error = null;
-
     try {
-      final existingViolations = await DatabaseService.getStudentViolations(studentId);
-      final sameTypeViolations = existingViolations.where((v) => v.type == type).length;
-      
-      ViolationStatus status;
-      if (sameTypeViolations == 0) {
-        status = ViolationStatus.warning;
-      } else if (sameTypeViolations == 1) {
-        status = ViolationStatus.parentNotified;
-      } else if (sameTypeViolations == 2) {
-        status = ViolationStatus.referredToSAO;
-      } else {
-        status = ViolationStatus.referredToGuidance;
-      }
-
-      final violation = Violation(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        studentId: studentId,
-        type: type,
-        date: DateTime.now(),
-        remarks: remarks,
-        status: status,
-        offenseCount: sameTypeViolations + 1,
-        reportedBy: reportedBy,
-      );
-
-      await DatabaseService.addViolation(violation);
+      await DatabaseService.resolveViolation(violationId);
       await loadAllViolations();
-      
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to record violation: ${e.toString()}';
+      _error = 'Failed to resolve violation: ${e.toString()}';
       notifyListeners();
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<void> updateViolationStatus(String violationId, ViolationStatus status) async {
+  // DELETE /api/guidance/violations/{id}
+  // Delete a violation
+  Future<void> deleteGuidanceViolation(String violationId) async {
     _setLoading(true);
     _error = null;
-
     try {
-      await DatabaseService.updateViolationStatus(violationId, status);
+      await DatabaseService.deleteGuidanceViolation(violationId);
       await loadAllViolations();
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to update violation: ${e.toString()}';
+      _error = 'Failed to delete violation: ${e.toString()}';
       notifyListeners();
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // SAO METHODS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  // GET /api/sao/violations
+  // Load all violations for SAO
+  Future<void> loadSaoViolations() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _violations = await DatabaseService.getSaoViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load SAO violations: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/sao/violations/by-status/{status}
+  // Filter violations by status: pending / approved / rejected
+  Future<void> loadSaoViolationsByStatus(String status) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _violations = await DatabaseService.getSaoViolationsByStatus(status);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load violations by status: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/sao/violations/summary
+  // Load SAO summary stats
+  Future<void> loadSaoSummary() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _saoSummary = await DatabaseService.getSaoSummary();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load SAO summary: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PUT /api/sao/violations/{id}/approve
+  Future<void> approveViolation(String violationId) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.approveViolation(violationId);
+      await loadSaoViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to approve violation: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PUT /api/sao/violations/{id}/reject
+  Future<void> rejectViolation(String violationId) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.rejectViolation(violationId);
+      await loadSaoViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to reject violation: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // DELETE /api/sao/violations/{id}
+  Future<void> deleteSaoViolation(String violationId) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.deleteSaoViolation(violationId);
+      await loadSaoViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to delete violation: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/sao/students/{studentNo}/report
+  Future<void> loadStudentReport(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _studentReport = await DatabaseService.getStudentReport(studentNo) ?? {};
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load student report: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/sao/users
+  Future<void> loadAllUsers() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _users = await DatabaseService.getAllUsers();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load users: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // PUT /api/sao/users/{id}
+  Future<void> updateUser(String userId, Map<String, dynamic> userData) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.updateUser(userId, userData);
+      await loadAllUsers();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to update user: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // DELETE /api/sao/users/{id}
+  Future<void> deleteUser(String userId) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.deleteUser(userId);
+      await loadAllUsers();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to delete user: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // LEGACY — kept for compatibility with existing screens
+  // ════════════════════════════════════════════════════════════════════════════
+
+  Future<void> updateViolationStatus(String violationId, ViolationStatus status) async {
+    if (status == ViolationStatus.referredToSAO) {
+      await approveViolation(violationId);
+    } else if (status == ViolationStatus.cleared) {
+      await rejectViolation(violationId);
+    } else {
+      await resolveViolation(violationId);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  String _violationTypeToString(ViolationType type) {
+    switch (type) {
+      case ViolationType.noId:        return 'No ID';
+      case ViolationType.noUniform:   return 'No Uniform';
+      case ViolationType.piercing:    return 'Piercing';
+      case ViolationType.coloredHair: return 'Colored Hair';
     }
   }
 

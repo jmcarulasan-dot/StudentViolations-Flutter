@@ -13,6 +13,7 @@ class User {
   final UserRole role;
   final String? gradeSection;
   final String? contactNumber;
+  final String? studentNo; // Added — needed for student JWT security fix
 
   User({
     required this.id,
@@ -22,6 +23,7 @@ class User {
     required this.role,
     this.gradeSection,
     this.contactNumber,
+    this.studentNo,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +35,7 @@ class User {
       'role': role.name,
       'gradeSection': gradeSection,
       'contactNumber': contactNumber,
+      'studentNo': studentNo,
     };
   }
 
@@ -45,6 +48,7 @@ class User {
       role: UserRole.values.firstWhere((r) => r.name == map['role']),
       gradeSection: map['gradeSection'],
       contactNumber: map['contactNumber'],
+      studentNo: map['studentNo'],
     );
   }
 }
