@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
-import '../models/violation.dart';
 
 const _red  = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -15,15 +14,29 @@ class SAODashboard extends StatefulWidget {
   State<SAODashboard> createState() => _SAODashboardState();
 }
 
-class _SAODashboardState extends State<SAODashboard> {
-  String _selectedFilter = 'referred';
+class _SAODashboardState extends State<SAODashboard>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  String _violationFilter = 'all';
+  final _reportController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ViolationProvider>(context, listen: false).loadAllViolations();
+      final vp = Provider.of<ViolationProvider>(context, listen: false);
+      vp.loadSaoViolations();
+      vp.loadSaoSummary();
+      vp.loadAllUsers();
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _reportController.dispose();
+    super.dispose();
   }
 
   @override
@@ -40,156 +53,573 @@ class _SAODashboardState extends State<SAODashboard> {
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => _showLogoutDialog(context),
-            tooltip: 'Logout',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: _red,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          tabs: const [
+            Tab(icon: Icon(Icons.report_problem_rounded), text: 'Violations'),
+            Tab(icon: Icon(Icons.bar_chart_rounded), text: 'Summary'),
+            Tab(icon: Icon(Icons.people_rounded), text: 'Users'),
+          ],
+        ),
       ),
       body: Consumer<ViolationProvider>(
-        builder: (context, violationProvider, child) {
-          if (violationProvider.isLoading) {
+        builder: (context, vp, child) {
+          if (vp.isLoading) {
             return const Center(child: CircularProgressIndicator(color: _navy));
           }
-
-          final all = violationProvider.violations;
-          final filtered = _filterViolations(all);
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildWelcomeCard(context, all),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _buildStatCard('Referred\nto SAO', _getReferredCount(all), Icons.inbox_rounded, _red)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildStatCard('Disciplinary\nAction', _getDisciplinaryCount(all), Icons.gavel_rounded, Colors.orange)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildStatCard('Cleared', _getClearedCount(all), Icons.check_circle_rounded, Colors.green)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _buildStatCard('Total\nAll', all.length, Icons.summarize_rounded, _navy)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: _navy.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _navy.withOpacity(0.15)),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, color: _navy, size: 18),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'SAO handles cases escalated by the Guidance Office. You are the highest authority.',
-                          style: TextStyle(fontSize: 12, color: _navy, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _filterChip('Referred to SAO', 'referred'),
-                      const SizedBox(width: 8),
-                      _filterChip('Disciplinary Action', 'disciplinary'),
-                      const SizedBox(width: 8),
-                      _filterChip('Cleared', 'cleared'),
-                      const SizedBox(width: 8),
-                      _filterChip('All Cases', 'all'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                filtered.isEmpty
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 48),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Column(
-                          children: [
-                            Icon(Icons.inbox_rounded, size: 56, color: Colors.grey),
-                            SizedBox(height: 10),
-                            Text('No cases found',
-                                style: TextStyle(color: Colors.grey, fontSize: 14)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) =>
-                            _buildViolationCard(filtered[index]),
-                      ),
-                const SizedBox(height: 16),
-              ],
-            ),
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildViolationsTab(context, vp),
+              _buildSummaryTab(context, vp),
+              _buildUsersTab(context, vp),
+            ],
           );
         },
       ),
     );
   }
 
-  // ── Logout Confirmation Dialog ──────────────────────────────────────────────
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.logout_rounded, color: _red, size: 24),
-              SizedBox(width: 10),
-              Text('Logout',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _navy)),
-            ],
-          ),
-          content: const Text(
-            'Are you sure you want to logout?',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              style: TextButton.styleFrom(foregroundColor: _navy),
-              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+  // ── Tab 1: Violations ───────────────────────────────────────────────────────
+  Widget _buildViolationsTab(BuildContext context, ViolationProvider vp) {
+    final filtered = _filterViolations(vp);
+
+    return RefreshIndicator(
+      onRefresh: () => vp.loadSaoViolations(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeCard(vp),
+            const SizedBox(height: 16),
+
+            // Stats
+            Row(
+              children: [
+                Expanded(child: _statCard('Total', vp.violations.length, _navy)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Pending',
+                    vp.violations.where((v) => v.statusDescription == 'Pending').length, Colors.orange)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Approved',
+                    vp.violations.where((v) => v.statusDescription == 'Approved').length, Colors.green)),
+                const SizedBox(width: 8),
+                Expanded(child: _statCard('Rejected',
+                    vp.violations.where((v) => v.statusDescription == 'Rejected').length, _red)),
+              ],
             ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _logout(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            const SizedBox(height: 16),
+
+            // Filter chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _filterChip('All', 'all'),
+                  const SizedBox(width: 8),
+                  _filterChip('Pending', 'pending'),
+                  const SizedBox(width: 8),
+                  _filterChip('Approved', 'approved'),
+                  const SizedBox(width: 8),
+                  _filterChip('Rejected', 'rejected'),
+                ],
               ),
-              child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.w700)),
             ),
+            const SizedBox(height: 14),
+
+            // Violations list
+            filtered.isEmpty
+                ? _buildEmptyState('No violations found')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final v = filtered[index];
+                      final statusColor = _statusColor(v.statusDescription);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [BoxShadow(color: _navy.withOpacity(0.07), blurRadius: 8, offset: const Offset(0, 3))],
+                          border: Border.all(color: statusColor.withOpacity(0.2)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(v.violationDescription,
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(v.statusDescription,
+                                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text('Student: ${v.studentId}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                              Text(DateFormat('MMM dd, yyyy').format(v.date),
+                                  style: const TextStyle(fontSize: 12, color: Colors.black45)),
+                              if (v.severity != null)
+                                Text('Severity: ${v.severity}',
+                                    style: const TextStyle(fontSize: 12, color: Colors.black45)),
+                              Text('By: ${v.reportedBy ?? 'Unknown'}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black45)),
+
+                              // Action buttons — only show for Pending
+                              if (v.statusDescription == 'Pending') ...[
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _actionButton(
+                                        'Approve',
+                                        Icons.check_circle_rounded,
+                                        Colors.green,
+                                        () => _confirmApprove(context, vp, v.id),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _actionButton(
+                                        'Reject',
+                                        Icons.cancel_rounded,
+                                        _red,
+                                        () => _confirmReject(context, vp, v.id),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _deleteButton(() => _confirmDelete(context, vp, v.id)),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context, List<Violation> all) {
+  // ── Tab 2: Summary ──────────────────────────────────────────────────────────
+  Widget _buildSummaryTab(BuildContext context, ViolationProvider vp) {
+    final summary = vp.saoSummary;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await vp.loadSaoSummary();
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Summary stats
+            if (summary.isNotEmpty) ...[
+              Row(
+                children: [
+                  Expanded(child: _summaryStatCard('Total', summary['total']?.toString() ?? '0', _navy)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _summaryStatCard('Pending', summary['pending']?.toString() ?? '0', Colors.orange)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _summaryStatCard('Approved', summary['approved']?.toString() ?? '0', Colors.green)),
+                  const SizedBox(width: 8),
+                  Expanded(child: _summaryStatCard('Rejected', summary['rejected']?.toString() ?? '0', _red)),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // By severity
+              if (summary['by_severity'] != null) ...[
+                _buildCard(
+                  title: '📊 By Severity',
+                  child: Column(
+                    children: (summary['by_severity'] as List).map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Text(item['severity'] ?? '',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _navy.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text('${item['count']}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _navy)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // By type
+              if (summary['by_type'] != null) ...[
+                _buildCard(
+                  title: '📋 By Violation Type',
+                  child: Column(
+                    children: (summary['by_type'] as List).map((item) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(item['type'] ?? '',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text('${item['count']}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _red)),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ],
+
+            // Student report search
+            _buildCard(
+              title: '🔍 Student Report',
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _reportController,
+                    style: const TextStyle(fontSize: 13),
+                    decoration: _inputDeco('Enter StudentNo for full report', Icons.person_search_rounded),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (_reportController.text.isNotEmpty) {
+                          await vp.loadStudentReport(_reportController.text.trim());
+                          if (vp.studentReport.isNotEmpty && mounted) {
+                            _showStudentReport(context, vp.studentReport);
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _navy,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      icon: const Icon(Icons.search_rounded),
+                      label: const Text('Get Report', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Tab 3: Users ────────────────────────────────────────────────────────────
+  Widget _buildUsersTab(BuildContext context, ViolationProvider vp) {
+    return RefreshIndicator(
+      onRefresh: () => vp.loadAllUsers(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: _buildCard(
+          title: '👥 All Users (${vp.users.length})',
+          child: vp.users.isEmpty
+              ? _buildEmptyState('No users found')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: vp.users.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final u = vp.users[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: _roleColor(u.role.name).withOpacity(0.15),
+                        child: Text(u.name.substring(0, 1).toUpperCase(),
+                            style: TextStyle(fontWeight: FontWeight.w700,
+                                color: _roleColor(u.role.name))),
+                      ),
+                      title: Text(u.name,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(u.username,
+                              style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                          Text(u.gradeSection ?? '',
+                              style: const TextStyle(fontSize: 11, color: Colors.black45)),
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _roleColor(u.role.name).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(u.role.name.toUpperCase(),
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                                    color: _roleColor(u.role.name))),
+                          ),
+                          const SizedBox(width: 4),
+                          // Delete user button
+                          GestureDetector(
+                            onTap: () => _confirmDeleteUser(context, vp, u.id, u.name),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: _red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.delete_outline_rounded, color: _red, size: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ── Student report dialog ────────────────────────────────────────────────────
+  void _showStudentReport(BuildContext context, Map<String, dynamic> report) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(report['name'] ?? 'Student Report',
+            style: const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _dialogRow('Student No.', report['student_no'] ?? ''),
+              _dialogRow('Course', report['course'] ?? ''),
+              _dialogRow('Year', report['year'] ?? ''),
+              _dialogRow('Email', report['email'] ?? ''),
+              _dialogRow('Contact', report['contact_number'] ?? ''),
+              _dialogRow('Violations', report['violation_count']?.toString() ?? '0'),
+              _dialogRow('Warning Level', (report['warning_level'] ?? 'green').toUpperCase()),
+              const Divider(),
+              const Text('Violations:',
+                  style: TextStyle(fontWeight: FontWeight.w700, color: _navy, fontSize: 13)),
+              const SizedBox(height: 6),
+              if (report['violations'] != null)
+                ...(report['violations'] as List).map((v) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 3),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.circle, size: 6, color: _red),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text('${v['type']} — ${v['status']}',
+                          style: const TextStyle(fontSize: 12))),
+                    ],
+                  ),
+                )),
+            ],
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _navy,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dialogRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w500)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
+
+  // ── Action buttons ───────────────────────────────────────────────────────────
+  void _confirmApprove(BuildContext context, ViolationProvider vp, String id) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Approve Violation',
+            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w700)),
+        content: const Text('Approve this violation?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.black54))),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await vp.approveViolation(id);
+              if (vp.error == null && mounted) {
+                _showSnack(context, 'Violation approved!', Colors.green);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmReject(BuildContext context, ViolationProvider vp, String id) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Reject Violation',
+            style: TextStyle(color: _red, fontWeight: FontWeight.w700)),
+        content: const Text('Reject this violation?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.black54))),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await vp.rejectViolation(id);
+              if (vp.error == null && mounted) {
+                _showSnack(context, 'Violation rejected', _red);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, ViolationProvider vp, String id) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Violation',
+            style: TextStyle(color: _red, fontWeight: FontWeight.w700)),
+        content: const Text('Permanently delete this violation?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.black54))),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await vp.deleteSaoViolation(id);
+              if (vp.error == null && mounted) {
+                _showSnack(context, 'Violation deleted', _red);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteUser(BuildContext context, ViolationProvider vp, String id, String name) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete User',
+            style: TextStyle(color: _red, fontWeight: FontWeight.w700)),
+        content: Text('Delete user "$name" permanently?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel', style: TextStyle(color: Colors.black54))),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              await vp.deleteUser(id);
+              if (vp.error == null && mounted) {
+                _showSnack(context, 'User deleted', _red);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  List _filterViolations(ViolationProvider vp) {
+    switch (_violationFilter) {
+      case 'pending':  return vp.violations.where((v) => v.statusDescription == 'Pending').toList();
+      case 'approved': return vp.violations.where((v) => v.statusDescription == 'Approved').toList();
+      case 'rejected': return vp.violations.where((v) => v.statusDescription == 'Rejected').toList();
+      default:         return vp.violations;
+    }
+  }
+
+  Widget _buildWelcomeCard(ViolationProvider vp) {
     final name = Provider.of<AuthProvider>(context, listen: false).currentUser?.name ?? 'SAO';
-    final referredCount = _getReferredCount(all);
+    final pending = vp.violations.where((v) => v.statusDescription == 'Pending').length;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [_navy, Color(0xFF1A1F8F)],
@@ -197,9 +627,7 @@ class _SAODashboardState extends State<SAODashboard> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: _navy.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
+        boxShadow: [BoxShadow(color: _navy.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
@@ -217,12 +645,11 @@ class _SAODashboardState extends State<SAODashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Welcome, $name!',
-                    style: const TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Colors.white)),
                 const SizedBox(height: 2),
                 const Text('Student Affairs Office — Highest Authority',
                     style: TextStyle(fontSize: 12, color: Colors.white60)),
-                if (referredCount > 0) ...[
+                if (pending > 0) ...[
                   const SizedBox(height: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -230,10 +657,8 @@ class _SAODashboardState extends State<SAODashboard> {
                       color: _red.withOpacity(0.25),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                        '$referredCount case${referredCount > 1 ? 's' : ''} awaiting SAO decision!',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700)),
+                    child: Text('$pending violation${pending > 1 ? 's' : ''} awaiting decision!',
+                        style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ],
               ],
@@ -244,25 +669,63 @@ class _SAODashboardState extends State<SAODashboard> {
     );
   }
 
-  Widget _buildStatCard(String title, int count, IconData icon, Color color) {
+  Widget _buildCard({required String title, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: color.withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 4)),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: _navy.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(width: 4, height: 18,
+                decoration: BoxDecoration(color: _navy, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _navy)),
+          ]),
+          const SizedBox(height: 14),
+          child,
         ],
+      ),
+    );
+  }
+
+  Widget _statCard(String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 3))],
         border: Border.all(color: color.withOpacity(0.15)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
           Text(count.toString(),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: color)),
-          Text(title,
-              style: TextStyle(fontSize: 9, color: color.withOpacity(0.8)),
+          Text(label, style: TextStyle(fontSize: 10, color: color.withOpacity(0.8)),
+              textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryStatCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+          Text(label, style: TextStyle(fontSize: 10, color: color.withOpacity(0.8)),
               textAlign: TextAlign.center),
         ],
       ),
@@ -270,9 +733,17 @@ class _SAODashboardState extends State<SAODashboard> {
   }
 
   Widget _filterChip(String label, String value) {
-    final selected = _selectedFilter == value;
+    final selected = _violationFilter == value;
     return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = value),
+      onTap: () {
+        setState(() => _violationFilter = value);
+        final vp = Provider.of<ViolationProvider>(context, listen: false);
+        if (value == 'all') {
+          vp.loadSaoViolations();
+        } else {
+          vp.loadSaoViolationsByStatus(value);
+        }
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -280,120 +751,10 @@ class _SAODashboardState extends State<SAODashboard> {
           color: selected ? _navy : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: selected ? _navy : Colors.grey.shade300),
-          boxShadow: selected
-              ? [BoxShadow(color: _navy.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 2))]
-              : [],
         ),
         child: Text(label,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
                 color: selected ? Colors.white : Colors.black54)),
-      ),
-    );
-  }
-
-  Widget _buildViolationCard(Violation violation) {
-    final statusColor = _getStatusColor(violation.status);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: _navy.withOpacity(0.07), blurRadius: 8, offset: const Offset(0, 3)),
-        ],
-        border: Border.all(color: statusColor.withOpacity(0.2)),
-      ),
-      child: ExpansionTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        leading: CircleAvatar(
-          backgroundColor: _getViolationTypeColor(violation.type).withOpacity(0.15),
-          child: Icon(_getViolationTypeIcon(violation.type),
-              color: _getViolationTypeColor(violation.type), size: 20),
-        ),
-        title: Text(violation.violationDescription,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          'ID: ${violation.studentId}  •  ${DateFormat('MMM dd, yyyy').format(violation.date)}  •  Offense #${violation.offenseCount}',
-          style: const TextStyle(fontSize: 11),
-        ),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(violation.statusDescription,
-              style: TextStyle(
-                  fontSize: 10, fontWeight: FontWeight.w700, color: statusColor)),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Divider(),
-                if (violation.remarks != null) ...[
-                  const Text('Remarks',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: _navy, fontSize: 13)),
-                  const SizedBox(height: 4),
-                  Text(violation.remarks!, style: const TextStyle(fontSize: 13)),
-                  const SizedBox(height: 8),
-                ],
-                Text('Reported By: ${violation.reportedBy ?? 'Unknown'}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                const SizedBox(height: 14),
-                if (violation.status == ViolationStatus.referredToSAO) ...[
-                  const Text('SAO Actions',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: _navy, fontSize: 13)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _actionButton(
-                          'Disciplinary Action',
-                          Icons.gavel_rounded,
-                          Colors.orange,
-                          () => _takeDisciplinaryAction(violation),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _actionButton(
-                          'Clear Case',
-                          Icons.check_circle_rounded,
-                          Colors.green,
-                          () => _clearViolation(violation),
-                        ),
-                      ),
-                    ],
-                  ),
-                ] else if (violation.status == ViolationStatus.cleared) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.green.withOpacity(0.2)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
-                        SizedBox(width: 8),
-                        Text('This case has been cleared',
-                            style: TextStyle(
-                                color: Colors.green, fontWeight: FontWeight.w600, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -405,111 +766,79 @@ class _SAODashboardState extends State<SAODashboard> {
         backgroundColor: color,
         foregroundColor: Colors.white,
         elevation: 2,
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
-      icon: Icon(icon, size: 16),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      icon: Icon(icon, size: 14),
+      label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 
-  List<Violation> _filterViolations(List<Violation> violations) {
-    switch (_selectedFilter) {
-      case 'referred':
-        return violations.where((v) => v.status == ViolationStatus.referredToSAO).toList();
-      case 'disciplinary':
-        return violations.where((v) => v.status == ViolationStatus.disciplinaryAction).toList();
-      case 'cleared':
-        return violations.where((v) => v.status == ViolationStatus.cleared).toList();
-      default:
-        return violations;
-    }
-  }
-
-  int _getReferredCount(List<Violation> v) =>
-      v.where((x) => x.status == ViolationStatus.referredToSAO).length;
-  int _getDisciplinaryCount(List<Violation> v) =>
-      v.where((x) => x.status == ViolationStatus.disciplinaryAction).length;
-  int _getClearedCount(List<Violation> v) =>
-      v.where((x) => x.status == ViolationStatus.cleared).length;
-
-  Color _getStatusColor(ViolationStatus status) {
-    switch (status) {
-      case ViolationStatus.warning:             return Colors.orange;
-      case ViolationStatus.parentNotified:      return Colors.blue;
-      case ViolationStatus.referredToSAO:       return _red;
-      case ViolationStatus.referredToGuidance:  return Colors.teal;
-      case ViolationStatus.disciplinaryAction:  return Colors.deepOrange;
-      case ViolationStatus.cleared:             return Colors.green;
-      default:                                  return Colors.grey;
-    }
-  }
-
-  Color _getViolationTypeColor(ViolationType type) {
-    switch (type) {
-      case ViolationType.noId:         return Colors.red;
-      case ViolationType.noUniform:    return Colors.orange;
-      case ViolationType.piercing:     return Colors.purple;
-      case ViolationType.coloredHair:  return Colors.blue;
-    }
-  }
-
-  IconData _getViolationTypeIcon(ViolationType type) {
-    switch (type) {
-      case ViolationType.noId:         return Icons.badge_rounded;
-      case ViolationType.noUniform:    return Icons.person_off_rounded;
-      case ViolationType.piercing:     return Icons.diamond_rounded;
-      case ViolationType.coloredHair:  return Icons.face_rounded;
-    }
-  }
-
-  void _takeDisciplinaryAction(Violation violation) async {
-    final confirmed = await _confirm(
-        'Disciplinary Action',
-        'Are you sure you want to impose a disciplinary action on this student?');
-    if (confirmed) {
-      final vp = Provider.of<ViolationProvider>(context, listen: false);
-      await vp.updateViolationStatus(violation.id, ViolationStatus.disciplinaryAction);
-      if (vp.error == null) _showSnack('Disciplinary action imposed', Colors.orange);
-    }
-  }
-
-  void _clearViolation(Violation violation) async {
-    final confirmed = await _confirm('Clear Case', 'Are you sure you want to clear this case?');
-    if (confirmed) {
-      final vp = Provider.of<ViolationProvider>(context, listen: false);
-      await vp.updateViolationStatus(violation.id, ViolationStatus.cleared);
-      if (vp.error == null) _showSnack('Case cleared ✅', Colors.green);
-    }
-  }
-
-  Future<bool> _confirm(String title, String message) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: const TextStyle(color: _navy, fontWeight: FontWeight.w700)),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.black54)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _navy,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
+  Widget _deleteButton(VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, size: 16, color: Colors.grey),
       ),
     );
-    return result ?? false;
   }
 
-  void _showSnack(String message, Color color) {
+  Widget _buildEmptyState(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Column(
+          children: [
+            const Icon(Icons.inbox_rounded, size: 48, color: Colors.grey),
+            const SizedBox(height: 8),
+            Text(message, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 13, color: Colors.black45),
+      prefixIcon: Icon(icon, color: _navy, size: 20),
+      filled: true,
+      fillColor: const Color(0xFFF7F8FC),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _navy, width: 1.8)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  Color _statusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved': return Colors.green;
+      case 'rejected': return _red;
+      default:         return Colors.orange;
+    }
+  }
+
+  Color _roleColor(String role) {
+    switch (role.toLowerCase()) {
+      case 'guard':    return Colors.blue;
+      case 'guidance': return Colors.purple;
+      case 'sao':      return _red;
+      default:         return Colors.teal;
+    }
+  }
+
+  void _showSnack(BuildContext context, String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message, style: const TextStyle(fontWeight: FontWeight.w600)),
       backgroundColor: color,
@@ -519,9 +848,39 @@ class _SAODashboardState extends State<SAODashboard> {
     ));
   }
 
-  Future<void> _logout(BuildContext context) async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.logout();
-    if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(children: [
+          Icon(Icons.logout_rounded, color: _red, size: 24),
+          SizedBox(width: 10),
+          Text('Logout', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _navy)),
+        ]),
+        content: const Text('Are you sure you want to logout?',
+            style: TextStyle(fontSize: 14, color: Colors.black54)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            style: TextButton.styleFrom(foregroundColor: _navy),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              await auth.logout();
+              if (mounted) Navigator.of(context).pushReplacementNamed('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
   }
 }

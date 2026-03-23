@@ -320,6 +320,57 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
+  // GET /api/guidance/students/{studentNo}/report
+  Future<Map<String, dynamic>?> getGuidanceStudentReport(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await DatabaseService.getGuidanceStudentReport(studentNo);
+      if (result == null) _error = 'Student not found: $studentNo';
+      notifyListeners();
+      return result;
+    } catch (e) {
+      _error = 'Failed to get student report: ${e.toString()}';
+      notifyListeners();
+      return null;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guidance/violations/pending
+  Future<void> loadPendingViolations() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _violations = await DatabaseService.getGuidancePendingViolations();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load pending violations: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // GET /api/guidance/violations/by-severity
+  List<Map<String, dynamic>> _severityGroups = [];
+  List<Map<String, dynamic>> get severityGroups => _severityGroups;
+
+  Future<void> loadViolationsBySeverity() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _severityGroups = await DatabaseService.getGuidanceViolationsBySeverity();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load violations by severity: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ════════════════════════════════════════════════════════════════════════════
   // SAO METHODS
   // ════════════════════════════════════════════════════════════════════════════

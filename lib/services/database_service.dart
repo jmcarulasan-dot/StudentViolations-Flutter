@@ -407,13 +407,13 @@ class DatabaseService {
     }
   }
 
-  // GET /api/guidance/students/{studentNo}
-  // Returns one specific student
+  // GET /api/guidance/students/{studentNo}/report
+  // Returns full student profile + all violations + warning level
   static Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/students/$studentNo'),
+        Uri.parse('$_baseUrl/api/guidance/students/$studentNo/report'),
         headers: headers,
       );
       final data = jsonDecode(response.body);
@@ -422,7 +422,7 @@ class DatabaseService {
       }
       return null;
     } catch (e) {
-      throw Exception('Failed to get student: $e');
+      throw Exception('Failed to get student report: $e');
     }
   }
 
@@ -431,8 +431,10 @@ class DatabaseService {
   static Future<List<Violation>> getAllViolations() async {
     try {
       final headers = await _authHeaders();
+      // Guidance has no plain GET /violations — use pending endpoint
+      // to show all violations that need attention
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/violations'),
+        Uri.parse('$_baseUrl/api/guidance/violations/pending'),
         headers: headers,
       );
       if (response.statusCode == 200) {
@@ -490,6 +492,76 @@ class DatabaseService {
       }
     } catch (e) {
       throw Exception('Failed to delete violation: $e');
+    }
+  }
+
+  // GET /api/guidance/students/{studentNo}/report
+  // Returns full student profile + all violations + warning level
+  static Future<Map<String, dynamic>?> getGuidanceStudentReport(String studentNo) async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/guidance/students/$studentNo/report'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 1) {
+        return Map<String, dynamic>.from(data['data']);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get student report: $e');
+    }
+  }
+
+  // GET /api/guidance/violations/pending
+  // Returns only pending violations
+  static Future<List<Violation>> getGuidancePendingViolations() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/guidance/violations/pending'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List violations = data['data'];
+        return violations.map((v) => Violation(
+          id:            v['id'].toString(),
+          studentId:     v['student_no'] ?? '',
+          type:          _parseViolationType(v['type']),
+          date:          DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
+          remarks:       v['details'] ?? '',
+          status:        _parseStatus(v['status']),
+          offenseCount:  1,
+          reportedBy:    v['recorded_by'] ?? '',
+          violationName: v['type'] ?? '',
+          severity:      v['severity'] ?? '',
+        )).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Failed to get pending violations: $e');
+    }
+  }
+
+  // GET /api/guidance/violations/by-severity
+  // Returns violations grouped by severity
+  static Future<List<Map<String, dynamic>>> getGuidanceViolationsBySeverity() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/guidance/violations/by-severity'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List groups = data['data'];
+        return groups.map((g) => Map<String, dynamic>.from(g)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Failed to get violations by severity: $e');
     }
   }
 
