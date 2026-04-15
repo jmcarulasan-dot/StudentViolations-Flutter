@@ -101,14 +101,14 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
       final userRole = prefs.getString('user_role');
+      final userName = prefs.getString('user_name'); // ADD THIS
 
       if (userId != null && userRole != null) {
-        // Restore user from saved session without calling the API
         _currentUser = User(
           id: userId,
           username: '',
           password: '',
-          name: '',
+          name: userName ?? '', // ADD THIS
           role: UserRole.values.firstWhere(
             (r) => r.name == userRole,
             orElse: () => UserRole.student,
@@ -126,6 +126,7 @@ class AuthProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_id', user.id);
     await prefs.setString('user_role', user.role.name);
+    await prefs.setString('user_name', user.name);  
   }
 
   // ── Clear session from SharedPreferences ──────────────────────────────────
@@ -133,6 +134,7 @@ class AuthProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_id');
     await prefs.remove('user_role');
+    await prefs.remove('user_name');
   }
 
   void _setLoading(bool loading) {

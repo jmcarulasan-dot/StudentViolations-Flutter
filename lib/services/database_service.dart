@@ -44,33 +44,53 @@ class DatabaseService {
   // ════════════════════════════════════════════════════════════════════════════
 
   // POST /api/auth/login
-  static Future<User?> login(String username, String password) async {
-  try {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 && data['status'] == 200) {
-      await _saveToken(data['token']);
-      await _saveStudentNo(''); // no studentNo in this response
-      final roleStr = (data['role'] as String).toLowerCase();
-      return User(
-        id:        '',
-        username:  username,
-        password:  '',
-        name:      data['message'] ?? username, // no 'name' field either
-        role:      _parseRole(roleStr),
-        studentNo: '',
+      static Future<User?> login(String username, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
       );
-    }
-    return null;
-  } catch (e) {
-    throw Exception('Login failed: $e');
-  }
-}
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 200) {
+        await _saveToken(data['token']);
+        await _saveStudentNo(''); 
 
+        // DECODE THE JWT TO GET THE REAL NAME
+        final decodedToken = _decodeJwt(data['token']); 
+        final name = decodedToken['name']?.toString() ?? username;
+        final id = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '';
+
+        final roleStr = (data['role'] as String).toLowerCase();
+        return User(
+          id: id, 
+          username: username,
+          password: '',
+          name: name, // Now says "Welcome, Jeff!" instead of "Welcome, Login successful!"
+          role: _parseRole(roleStr),
+          studentNo: '',
+        );
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Login failed: $e');
+    }
+  }
+
+  // Make sure you add this helper method at the very bottom of the file!
+  static Map<String, dynamic> _decodeJwt(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) return {};
+    String payload = parts[1];
+    payload = payload.replaceAll('-', '+').replaceAll('_', '/');
+    switch (payload.length % 4) {
+      case 0: break;
+      case 2: payload += '=='; break;
+      case 3: payload += '='; break;
+    }
+    final decoded = utf8.decode(base64.decode(payload));
+    return jsonDecode(decoded);
+  }
   // POST /api/auth/register
   static Future<User?> register({
     required String username,
@@ -103,7 +123,7 @@ class DatabaseService {
           'gender':        (gender ?? 'male').toLowerCase(),
           'dateOfBirth':   dateOfBirth ?? '2000-01-01',
           'address':       address ?? '',
-          'contactNumber': contactNumber ?? '',
+          'number': contactNumber ?? '',
           'role':          role.name,
           'course':        course,
           'year':          yearNum,

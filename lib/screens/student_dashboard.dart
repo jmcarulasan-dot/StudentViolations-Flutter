@@ -422,7 +422,7 @@ class _StudentDashboardState extends State<StudentDashboard>
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Image.memory(
-                      base64Decode(vp.studentQrCode!),
+                      base64Decode(vp.studentQrCode!.replaceAll('\n', '')),
                       width: 200, height: 200,
                       fit: BoxFit.contain,
                     ),
@@ -585,12 +585,12 @@ class _StudentDashboardState extends State<StudentDashboard>
     );
   }
 
-  Color _warningColor(String level) {
+   Color _warningColor(String level) {
     switch (level.toLowerCase()) {
-      case 'warning':  return Colors.yellow.shade700;
-      case 'danger':   return Colors.orange;
-      case 'critical': return _red;
-      default:         return Colors.green;
+      case 'yellow':  return Colors.yellow.shade700; // Matches C# 1 violation
+      case 'orange':  return Colors.orange;          // Matches C# 2 violations
+      case 'red':     return _red;                  // Matches C# 3+ violations
+      default:         return Colors.green;            // Matches C# 0 violations
     }
   }
 
