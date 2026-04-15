@@ -136,7 +136,7 @@ class ViolationProvider with ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      final result = await DatabaseService.getStudentByStudentNo(studentNo);
+      final result = await DatabaseService.validateStudent(studentNo);
       notifyListeners();
       return result;
     } catch (e) {
@@ -167,38 +167,39 @@ class ViolationProvider with ChangeNotifier {
 
   // POST /api/guard/student/violation
   // Record a new violation
-  Future<void> recordViolation({
-    required String studentId,
-    required ViolationType type,
-    required String reportedBy,
-    String? remarks,
-    String? severity,
-  }) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      final violation = Violation(
-        id:            DateTime.now().millisecondsSinceEpoch.toString(),
-        studentId:     studentId,
-        type:          type,
-        date:          DateTime.now(),
-        remarks:       remarks,
-        status:        ViolationStatus.warning,
-        offenseCount:  1,
-        reportedBy:    reportedBy,
-        violationName: _violationTypeToString(type),
-        severity:      severity ?? 'minor',
-      );
-      await DatabaseService.addViolation(violation);
-      await loadAllViolations();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to record violation: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
+ Future<void> recordViolation({
+  required String studentId,
+  required ViolationType type,
+  required String reportedBy,
+  String? remarks,
+  String? severity,
+  String? violationName,  // add this
+}) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    final violation = Violation(
+      id:            DateTime.now().millisecondsSinceEpoch.toString(),
+      studentId:     studentId,
+      type:          type,
+      date:          DateTime.now(),
+      remarks:       remarks,
+      status:        ViolationStatus.warning,
+      offenseCount:  1,
+      reportedBy:    reportedBy,
+      violationName: violationName ?? _violationTypeToString(type),  // update this
+      severity:      severity ?? 'minor',
+    );
+    await DatabaseService.addViolation(violation);
+    await loadStudents();
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to record violation: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
   }
+}
 
   // GET /api/guard/violations/student?studentNo=xxx
   // View all violations of a specific student
@@ -547,6 +548,113 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
+  // PUT /api/guidance/students/{studentNo}/warn
+Future<void> warnStudent(String studentNo) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.warnStudent(studentNo);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to warn student: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+// PUT /api/guidance/students/{studentNo}/recommend-dismiss
+Future<void> recommendDismiss(String studentNo) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.recommendDismiss(studentNo);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to recommend dismissal: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+// POST /api/guidance/violations/{id}/appeal/review
+Future<void> guidanceReviewAppeal(
+    String violationId, String appealStatus, String appealRemarks) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.guidanceReviewAppeal(
+        violationId, appealStatus, appealRemarks);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to review appeal: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+// PUT /api/sao/violations/{id}/appeal/review
+Future<void> saoReviewAppeal(
+    String violationId, String appealStatus, String appealRemarks) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.saoReviewAppeal(
+        violationId, appealStatus, appealRemarks);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to review appeal: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+// PUT /api/sao/students/{studentNo}/dismiss
+Future<void> dismissStudent(String studentNo) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.dismissStudent(studentNo);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to dismiss student: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+// PUT /api/sao/students/{studentNo}/cancel-dismiss
+Future<void> cancelDismiss(String studentNo) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.cancelDismiss(studentNo);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to cancel dismissal: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
+
+Future<void> submitAppeal(String violationId, String appealText) async {
+  _setLoading(true);
+  _error = null;
+  try {
+    await DatabaseService.submitAppeal(violationId, appealText);
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to submit appeal: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
   // ════════════════════════════════════════════════════════════════════════════
   // HELPERS
   // ════════════════════════════════════════════════════════════════════════════
