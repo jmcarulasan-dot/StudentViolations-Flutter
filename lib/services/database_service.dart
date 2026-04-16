@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/violation.dart';
+import '../models/notification_model.dart';
 
 class DatabaseService {
   static const String _baseUrl = 'http://192.168.254.148:5277';
@@ -44,7 +45,7 @@ class DatabaseService {
   // ════════════════════════════════════════════════════════════════════════════
 
   // POST /api/auth/login
-      static Future<User?> login(String username, String password) async {
+  static Future<User?> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/login'),
@@ -54,16 +55,16 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         await _saveToken(data['token']);
-        await _saveStudentNo(''); 
+        await _saveStudentNo('');
 
         // DECODE THE JWT TO GET THE REAL NAME
-        final decodedToken = _decodeJwt(data['token']); 
+        final decodedToken = _decodeJwt(data['token']);
         final name = decodedToken['name']?.toString() ?? username;
         final id = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '';
 
         final roleStr = (data['role'] as String).toLowerCase();
         return User(
-          id: id, 
+          id: id,
           username: username,
           password: '',
           name: name, // Now says "Welcome, Jeff!" instead of "Welcome, Login successful!"
@@ -882,6 +883,42 @@ class DatabaseService {
     } else if (status == ViolationStatus.cleared) {
       await rejectViolation(violationId);
     }
+  }
+
+  static Future<List<NotificationModel>> getNotifications() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/notifications'),
+        headers: await _authHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body);
+        final List data = body['data'] ?? [];
+        return data.map((e) => NotificationModel.fromMap(e)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+  // PUT /api/notifications/{id}/read
+  static Future<void> markNotificationAsRead(int id) async {
+    try {
+      await http.put(
+        Uri.parse('$_baseUrl/api/notifications/$id/read'),
+        headers: await _authHeaders(),
+      );
+    } catch (_) {}
+  }
+
+  // PUT /api/notifications/read-all
+  static Future<void> markAllNotificationsAsRead() async {
+    try {
+      await http.put(
+        Uri.parse('$_baseUrl/api/notifications/read-all'),
+        headers: await _authHeaders(),
+      );
+    } catch (_) {}
   }
 
   // kept for compat

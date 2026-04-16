@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import '../models/violation.dart';
 import '../models/user.dart';
 import '../services/database_service.dart';
+import '../models/notification_model.dart';
 
 class ViolationProvider with ChangeNotifier {
   List<Violation> _violations = [];
+  List<NotificationModel> _notifications = [];
   List<User> _students = [];
   List<User> _users = [];
   bool _isLoading = false;
@@ -31,6 +33,7 @@ class ViolationProvider with ChangeNotifier {
   List<Violation> get violations   => _violations;
   List<User> get students          => _students;
   List<User> get users             => _users;
+  List<NotificationModel> get notifications => _notifications;
   bool get isLoading               => _isLoading;
   String? get error                => _error;
   String get warningLevel          => _warningLevel;
@@ -45,12 +48,8 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> get saoSummary       => _saoSummary;
   Map<String, dynamic> get studentReport    => _studentReport;
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // STUDENT METHODS
-  // ════════════════════════════════════════════════════════════════════════════
-
+  //STUDENTS METHOD
   // GET /api/student/violations
-  // Loads own violations + counts + warning level
   Future<void> loadMyViolations() async {
     _setLoading(true);
     _error = null;
@@ -74,7 +73,6 @@ class ViolationProvider with ChangeNotifier {
   }
 
   // GET /api/student/profile
-  // Loads own profile info
   Future<void> loadMyProfile() async {
     _setLoading(true);
     _error = null;
@@ -90,7 +88,6 @@ class ViolationProvider with ChangeNotifier {
   }
 
   // GET /api/student/qrcode
-  // Loads own QR code
   Future<void> loadMyQrCode() async {
     _setLoading(true);
     _error = null;
@@ -105,17 +102,12 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // Legacy — kept for compatibility with existing screens
   Future<void> loadStudentViolations(String studentId) async {
     await loadMyViolations();
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // GUARD METHODS
-  // ════════════════════════════════════════════════════════════════════════════
-
   // GET /api/guard/students
-  // Load all students for dropdown
   Future<void> loadStudents() async {
     _setLoading(true);
     _error = null;
@@ -173,7 +165,7 @@ class ViolationProvider with ChangeNotifier {
   required String reportedBy,
   String? remarks,
   String? severity,
-  String? violationName,  // add this
+  String? violationName,  
 }) async {
   _setLoading(true);
   _error = null;
@@ -187,7 +179,7 @@ class ViolationProvider with ChangeNotifier {
       status:        ViolationStatus.warning,
       offenseCount:  1,
       reportedBy:    reportedBy,
-      violationName: violationName ?? _violationTypeToString(type),  // update this
+      violationName: violationName ?? _violationTypeToString(type),  
       severity:      severity ?? 'minor',
     );
     await DatabaseService.addViolation(violation);
@@ -233,9 +225,7 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // GUIDANCE METHODS
-  // ════════════════════════════════════════════════════════════════════════════
 
   // GET /api/guidance/students
   // Load all students
@@ -372,9 +362,7 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // SAO METHODS
-  // ════════════════════════════════════════════════════════════════════════════
 
   // GET /api/sao/violations
   // Load all violations for SAO
@@ -534,9 +522,6 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
-  // LEGACY — kept for compatibility with existing screens
-  // ════════════════════════════════════════════════════════════════════════════
 
   Future<void> updateViolationStatus(String violationId, ViolationStatus status) async {
     if (status == ViolationStatus.referredToSAO) {
@@ -655,9 +640,62 @@ Future<void> submitAppeal(String violationId, String appealText) async {
     _setLoading(false);
   }
 }
-  // ════════════════════════════════════════════════════════════════════════════
+
+Future<void> markNotificationAsRead(int id) async {
+    try {
+      await DatabaseService.markNotificationAsRead(id);
+      final index = _notifications.indexWhere((n) => n.id == id);
+      if (index != -1) {
+        _notifications[index] = NotificationModel(
+          id:             _notifications[index].id,
+          targetUsername: _notifications[index].targetUsername,
+          targetRole:     _notifications[index].targetRole,
+          title:          _notifications[index].title,
+          message:        _notifications[index].message,
+          isRead:         true,
+          createdAt:      _notifications[index].createdAt,
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Failed to mark as read: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+
+  Future<void> markAllNotificationsAsRead() async {
+    try {
+      await DatabaseService.markAllNotificationsAsRead();
+      _notifications = _notifications.map((n) => NotificationModel(
+        id:             n.id,
+        targetUsername: n.targetUsername,
+        targetRole:     n.targetRole,
+        title:          n.title,
+        message:        n.message,
+        isRead:         true,
+        createdAt:      n.createdAt,
+      )).toList();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to mark all as read: ${e.toString()}';
+      notifyListeners();
+    }
+  }
+ 
+Future<void> loadNotifications() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _notifications = await DatabaseService.getNotifications();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load notifications: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
   // HELPERS
-  // ════════════════════════════════════════════════════════════════════════════
 
   String _violationTypeToString(ViolationType type) {
     switch (type) {

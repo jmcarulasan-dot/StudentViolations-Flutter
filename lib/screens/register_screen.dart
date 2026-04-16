@@ -30,8 +30,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
 
-  final List<String> _yearLevels = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-  final List<String> _courses    = ['BSIT', 'BSA', 'BSBA', 'BSCS', 'BSHM'];
+  // FIX: Values must match backend ValidYears = { "1", "2", "3", "4" }
+  // Display label → actual value sent to API
+  final List<Map<String, String>> _yearLevels = [
+    {'label': '1st Year', 'value': '1'},
+    {'label': '2nd Year', 'value': '2'},
+    {'label': '3rd Year', 'value': '3'},
+    {'label': '4th Year', 'value': '4'},
+  ];
+
+  // FIX: Values must match backend ValidCourses = { "bsit", "bshm", "bsba" }
+  // Display label → actual value sent to API (API expects uppercase after trim)
+  final List<Map<String, String>> _courses = [
+    {'label': 'BSIT', 'value': 'BSIT'},
+    {'label': 'BSHM', 'value': 'BSHM'},
+    {'label': 'BSBA', 'value': 'BSBA'},
+  ];
 
   @override
   void dispose() {
@@ -80,18 +94,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: ClipOval(
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Image.asset('assets/images/ACLC.png', fit: BoxFit.contain),
+                        child: Image.asset('assets/images/ACLC.png',
+                            fit: BoxFit.contain),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'ACLC College of Mandaue',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white),
+                    style: TextStyle(fontSize: 20,
+                        fontWeight: FontWeight.w800, color: Colors.white),
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: _red.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -99,7 +116,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: const Text(
                       'Create Account',
-                      style: TextStyle(fontSize: 12, color: Colors.white70, letterSpacing: 1.2),
+                      style: TextStyle(fontSize: 12,
+                          color: Colors.white70, letterSpacing: 1.2),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -130,24 +148,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 10),
                             DropdownButtonFormField<UserRole>(
                               value: _selectedRole,
-                              decoration: _dropdownDecoration('Role', Icons.badge_rounded),
+                              decoration: _dropdownDecoration(
+                                  'Role', Icons.badge_rounded),
                               hint: const Text('Select your role'),
                               items: UserRole.values.map((role) {
                                 return DropdownMenuItem(
                                   value: role,
-                                  child: Row(
-                                    children: [
-                                      Icon(_getRoleIcon(role), size: 18, color: _navy),
-                                      const SizedBox(width: 10),
-                                      Text(_getRoleDisplayName(role),
-                                          style: const TextStyle(
-                                              fontSize: 14, fontWeight: FontWeight.w600)),
-                                    ],
-                                  ),
+                                  child: Row(children: [
+                                    Icon(_getRoleIcon(role),
+                                        size: 18, color: _navy),
+                                    const SizedBox(width: 10),
+                                    Text(_getRoleDisplayName(role),
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600)),
+                                  ]),
                                 );
                               }).toList(),
-                              onChanged: (value) => setState(() => _selectedRole = value),
-                              validator: (v) => v == null ? 'Please select a role' : null,
+                              onChanged: (value) =>
+                                  setState(() => _selectedRole = value),
+                              validator: (v) =>
+                                  v == null ? 'Please select a role' : null,
                             ),
                             const SizedBox(height: 20),
 
@@ -159,36 +180,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               label: 'Full Name',
                               icon: Icons.person_outline_rounded,
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please enter your full name';
-                                if (v.length < 3) return 'Name must be at least 3 characters';
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter your full name';
+                                if (v.length < 3)
+                                  return 'Name must be at least 3 characters';
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
 
-                            // Email
                             _buildTextField(
                               controller: _emailController,
                               label: 'Email Address',
                               icon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please enter your email';
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v))
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter your email';
+                                if (!RegExp(
+                                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                    .hasMatch(v))
                                   return 'Please enter a valid email address';
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
 
-                            // Address — required for all roles
                             _buildTextField(
                               controller: _addressController,
                               label: 'Address',
                               icon: Icons.location_on_outlined,
                               hint: 'e.g. Mandaue City, Cebu',
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please enter your address';
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter your address';
                                 return null;
                               },
                             ),
@@ -202,8 +227,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               label: 'Username',
                               icon: Icons.alternate_email_rounded,
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please enter a username';
-                                if (v.length < 3) return 'Username must be at least 3 characters';
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter a username';
+                                if (v.length < 3)
+                                  return 'Username must be at least 3 characters';
                                 if (!RegExp(r'^[a-zA-Z0-9_]+$').hasMatch(v))
                                   return 'Letters, numbers, and underscores only';
                                 return null;
@@ -211,7 +238,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // Password
                             _buildTextField(
                               controller: _passwordController,
                               label: 'Password',
@@ -224,18 +250,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       : Icons.visibility_outlined,
                                   color: Colors.black38, size: 20,
                                 ),
-                                onPressed: () =>
-                                    setState(() => _obscurePassword = !_obscurePassword),
+                                onPressed: () => setState(
+                                    () => _obscurePassword = !_obscurePassword),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please enter a password';
-                                if (v.length < 8) return 'Password must be at least 8 characters';
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter a password';
+                                if (v.length < 8)
+                                  return 'Password must be at least 8 characters';
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
 
-                            // Confirm Password
                             _buildTextField(
                               controller: _confirmPasswordController,
                               label: 'Confirm Password',
@@ -248,12 +275,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       : Icons.visibility_outlined,
                                   color: Colors.black38, size: 20,
                                 ),
-                                onPressed: () => setState(
-                                    () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                onPressed: () => setState(() =>
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword),
                               ),
                               validator: (v) {
-                                if (v == null || v.isEmpty) return 'Please confirm your password';
-                                if (v != _passwordController.text) return 'Passwords do not match';
+                                if (v == null || v.isEmpty)
+                                  return 'Please confirm your password';
+                                if (v != _passwordController.text)
+                                  return 'Passwords do not match';
                                 return null;
                               },
                             ),
@@ -264,7 +294,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               _sectionLabel('Student Information'),
                               const SizedBox(height: 10),
 
-                              // StudentNo — validated for duplicates by the API
                               _buildTextField(
                                 controller: _studentNoController,
                                 label: 'Student Number',
@@ -278,39 +307,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // Course
+                              // FIX: Course dropdown uses correct backend values
                               DropdownButtonFormField<String>(
                                 value: _selectedCourse,
                                 dropdownColor: Colors.white,
                                 iconEnabledColor: _navy,
-                                style: const TextStyle(color: Colors.black87, fontSize: 14),
-                                decoration: _dropdownDecoration('Course', Icons.menu_book_rounded),
+                                style: const TextStyle(
+                                    color: Colors.black87, fontSize: 14),
+                                decoration: _dropdownDecoration(
+                                    'Course', Icons.menu_book_rounded),
                                 hint: const Text('Select course'),
-                                items: _courses.map((course) =>
-                                    DropdownMenuItem(value: course, child: Text(course))
-                                ).toList(),
-                                onChanged: (value) => setState(() => _selectedCourse = value),
-                                validator: (v) => v == null ? 'Please select your course' : null,
+                                items: _courses.map((c) => DropdownMenuItem(
+                                  value: c['value'],
+                                  child: Text(c['label']!),
+                                )).toList(),
+                                onChanged: (value) =>
+                                    setState(() => _selectedCourse = value),
+                                validator: (v) =>
+                                    v == null ? 'Please select your course' : null,
                               ),
                               const SizedBox(height: 16),
 
-                              // Year Level
+                              // FIX: Year dropdown uses "1","2","3","4" as values
                               DropdownButtonFormField<String>(
                                 value: _selectedYear,
                                 dropdownColor: Colors.white,
                                 iconEnabledColor: _navy,
-                                style: const TextStyle(color: Colors.black87, fontSize: 14),
-                                decoration: _dropdownDecoration('Year Level', Icons.calendar_today_rounded),
+                                style: const TextStyle(
+                                    color: Colors.black87, fontSize: 14),
+                                decoration: _dropdownDecoration(
+                                    'Year Level',
+                                    Icons.calendar_today_rounded),
                                 hint: const Text('Select year level'),
-                                items: _yearLevels.map((year) =>
-                                    DropdownMenuItem(value: year, child: Text(year))
-                                ).toList(),
-                                onChanged: (value) => setState(() => _selectedYear = value),
-                                validator: (v) => v == null ? 'Please select your year level' : null,
+                                items: _yearLevels.map((y) => DropdownMenuItem(
+                                  value: y['value'],
+                                  child: Text(y['label']!),
+                                )).toList(),
+                                onChanged: (value) =>
+                                    setState(() => _selectedYear = value),
+                                validator: (v) =>
+                                    v == null ? 'Please select your year level' : null,
                               ),
                               const SizedBox(height: 16),
 
-                              // Contact Number
                               _buildTextField(
                                 controller: _contactController,
                                 label: 'Contact Number',
@@ -320,8 +359,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 validator: (v) {
                                   if (v == null || v.isEmpty)
                                     return 'Please enter your contact number';
-                                  if (!RegExp(r'^[0-9]{11}$').hasMatch(v))
-                                    return 'Please enter a valid 11-digit number';
+                                  if (!RegExp(r'^09\d{9}$').hasMatch(v))
+                                    return 'Must start with 09 and be 11 digits';
                                   return null;
                                 },
                               ),
@@ -334,22 +373,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               builder: (context, authProvider, _) {
                                 if (authProvider.isLoading) {
                                   return const Center(
-                                    child: CircularProgressIndicator(color: _navy),
+                                    child: CircularProgressIndicator(
+                                        color: _navy),
                                   );
                                 }
                                 return SizedBox(
                                   width: double.infinity,
                                   height: 50,
                                   child: ElevatedButton(
-                                    onPressed: _selectedRole == null ? null : _register,
+                                    onPressed: _selectedRole == null
+                                        ? null
+                                        : _register,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _navy,
-                                      disabledBackgroundColor: Colors.grey.shade300,
+                                      disabledBackgroundColor:
+                                          Colors.grey.shade300,
                                       foregroundColor: Colors.white,
                                       elevation: 4,
                                       shadowColor: _navy.withOpacity(0.4),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius:
+                                            BorderRadius.circular(12),
                                       ),
                                     ),
                                     child: const Text(
@@ -366,18 +410,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            // ── Login Link ───────────────────────────────
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Text('Already have an account?',
-                                    style: TextStyle(fontSize: 13, color: Colors.black54)),
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black54)),
                                 TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pushReplacementNamed('/login'),
+                                  onPressed: () => Navigator.of(context)
+                                      .pushReplacementNamed('/login'),
                                   style: TextButton.styleFrom(
                                     foregroundColor: _navy,
-                                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6),
                                   ),
                                   child: const Text(
                                     'Login',
@@ -404,10 +450,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── Register Logic ────────────────────────────────────────────────────────
   void _register() async {
     if (_formKey.currentState!.validate() && _selectedRole != null) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final authProvider =
+          Provider.of<AuthProvider>(context, listen: false);
 
       await authProvider.register(
         username: _usernameController.text.trim(),
@@ -422,6 +468,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         studentNo: _selectedRole == UserRole.student
             ? _studentNoController.text.trim()
             : null,
+        // FIX: _selectedCourse and _selectedYear now already hold correct values
         course: _selectedRole == UserRole.student ? _selectedCourse : null,
         year: _selectedRole == UserRole.student ? _selectedYear : null,
       );
@@ -446,19 +493,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
-                children: [
-                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Registration successful! Please log in.',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
+              content: const Row(children: [
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Registration successful! Please log in.',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ]),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 3),
             ),
@@ -473,7 +518,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               content: Text(authProvider.error ?? 'Registration failed'),
               backgroundColor: _red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -482,15 +528,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
   Widget _sectionLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13, fontWeight: FontWeight.w700,
-        color: _navy, letterSpacing: 0.3,
-      ),
-    );
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: _navy,
+            letterSpacing: 0.3));
   }
 
   InputDecoration _dropdownDecoration(String label, IconData icon) {
@@ -500,26 +544,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       filled: true,
       fillColor: const Color(0xFFF7F8FC),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _navy, width: 1.8),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _navy, width: 1.8)),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _red, width: 1.5),
-      ),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _red, width: 1.5)),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _navy, width: 1.8),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _navy, width: 1.8)),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
@@ -547,22 +587,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: const Color(0xFFF7F8FC),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _navy, width: 1.8),
-        ),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _navy, width: 1.8)),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _red, width: 1.5),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: _red, width: 1.5)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       validator: validator,
     );

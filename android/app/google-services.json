@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "648245527320",
+    "project_id": "studentviolation-ac638",
+    "storage_bucket": "studentviolation-ac638.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648245527320:android:b6d3424586913e8687946d",
+        "android_client_info": {
+          "package_name": "com.example.violation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAy9SXyzxPB3X9eh_A_wWbnwoTaeH6CHPs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

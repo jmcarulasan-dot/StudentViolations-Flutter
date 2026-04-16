@@ -10,11 +10,14 @@ import 'screens/student_dashboard.dart';
 import 'screens/sao_dashboard.dart';
 import 'screens/guidance_dashboard.dart';
 import 'models/user.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   // Required before using async in main
   WidgetsFlutterBinding.ensureInitialized();
   DatabaseService.initialize();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 

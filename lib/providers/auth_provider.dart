@@ -13,7 +13,7 @@ class AuthProvider with ChangeNotifier {
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
 
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  //LOGIN
   Future<void> login(String username, String password) async {
     _setLoading(true);
     _error = null;
@@ -37,7 +37,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ── REGISTER ──────────────────────────────────────────────────────────────
+  // REGISTER
   Future<void> register({
     required String username,
     required String password,
@@ -87,7 +87,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ── LOGOUT ────────────────────────────────────────────────────────────────
+  // LOGOUT 
   Future<void> logout() async {
     _currentUser = null;
     await DatabaseService.clearToken();
@@ -95,20 +95,20 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // ── CHECK AUTH STATUS ─────────────────────────────────────────────────────
+  //CHECK AUTH STATUS 
   Future<void> checkAuthStatus() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString('user_id');
       final userRole = prefs.getString('user_role');
-      final userName = prefs.getString('user_name'); // ADD THIS
+      final userName = prefs.getString('user_name'); 
 
       if (userId != null && userRole != null) {
         _currentUser = User(
           id: userId,
           username: '',
           password: '',
-          name: userName ?? '', // ADD THIS
+          name: userName ?? '', 
           role: UserRole.values.firstWhere(
             (r) => r.name == userRole,
             orElse: () => UserRole.student,
@@ -121,7 +121,6 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // ── Save session to SharedPreferences ─────────────────────────────────────
   Future<void> _saveSession(User user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_id', user.id);
@@ -129,7 +128,6 @@ class AuthProvider with ChangeNotifier {
     await prefs.setString('user_name', user.name);  
   }
 
-  // ── Clear session from SharedPreferences ──────────────────────────────────
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_id');

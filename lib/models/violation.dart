@@ -24,9 +24,8 @@ class Violation {
   final ViolationStatus status;
   final int offenseCount;
   final String? reportedBy;
-  final String? violationName; // Raw API violation name e.g. "No ID", "Knife"
-  final String? severity;      // minor, moderate, major, critical
-
+  final String? violationName; 
+  final String? severity;      
   Violation({
     required this.id,
     required this.studentId,
@@ -70,7 +69,6 @@ class Violation {
     );
   }
 
-  // Shows raw API violation name if available
   String get violationDescription {
     if (violationName != null && violationName!.isNotEmpty) {
       return violationName!;
