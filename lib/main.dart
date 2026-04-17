@@ -12,12 +12,14 @@ import 'screens/guidance_dashboard.dart';
 import 'models/user.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   // Required before using async in main
   WidgetsFlutterBinding.ensureInitialized();
   DatabaseService.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FCMService.initialize();
   runApp(const MyApp());
 }
 
