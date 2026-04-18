@@ -126,6 +126,7 @@ class AuthProvider with ChangeNotifier {
     await prefs.setString('user_id', user.id);
     await prefs.setString('user_role', user.role.name);
     await prefs.setString('user_name', user.name);  
+    
   }
 
   Future<void> _clearSession() async {
@@ -133,6 +134,7 @@ class AuthProvider with ChangeNotifier {
     await prefs.remove('user_id');
     await prefs.remove('user_role');
     await prefs.remove('user_name');
+    await prefs.remove('jwt_token');
   }
 
   void _setLoading(bool loading) {

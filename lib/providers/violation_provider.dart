@@ -20,12 +20,8 @@ class ViolationProvider with ChangeNotifier {
   int _totalCount    = 0;
   String? _studentQrCode;
   Map<String, dynamic> _studentProfile = {};
-
-  // Guard-specific data
   Map<String, dynamic> _validatedStudent = {};
   Map<String, dynamic> _violationSummary = {};
-
-  // SAO-specific data
   Map<String, dynamic> _saoSummary = {};
   Map<String, dynamic> _studentReport = {};
 

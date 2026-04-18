@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
+import '../services/fcm_service.dart';
 
 const _red  = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -361,6 +362,7 @@ class _LoginScreenState extends State<LoginScreen>
       );
 
       if (authProvider.currentUser != null) {
+        await FCMService.registerTokenAfterLogin();
         if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
       } else {
         if (mounted) {

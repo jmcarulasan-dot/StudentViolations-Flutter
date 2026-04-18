@@ -14,6 +14,7 @@
     final String? gradeSection;
     final String? contactNumber;
     final String? studentNo; 
+    final String? token;
     User({
       required this.id,
       required this.username,
@@ -23,6 +24,8 @@
       this.gradeSection,
       this.contactNumber,
       this.studentNo,
+      this.token,
+      
     });
 
     Map<String, dynamic> toMap() {
