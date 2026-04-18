@@ -882,24 +882,31 @@ class DatabaseService {
     }
   }
   // PUT /api/notifications/{id}/read
-  static Future<void> markNotificationAsRead(int id) async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/api/notifications/$id/read'),
-        headers: await _authHeaders(),
-      );
-    } catch (_) {}
+  // PUT /api/notifications/{id}/read
+static Future<void> markNotificationAsRead(int id) async {
+  try {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/api/notifications/$id/read'),
+      headers: await _authHeaders(),
+    );
+    print("Mark as read status: ${response.statusCode}");
+  } catch (e) {
+    print("Mark as read error: $e");
   }
+}
 
-  // PUT /api/notifications/read-all
-  static Future<void> markAllNotificationsAsRead() async {
-    try {
-      await http.put(
-        Uri.parse('$_baseUrl/api/notifications/read-all'),
-        headers: await _authHeaders(),
-      );
-    } catch (_) {}
+// PUT /api/notifications/read-all
+static Future<void> markAllNotificationsAsRead() async {
+  try {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/api/notifications/read-all'),
+      headers: await _authHeaders(),
+    );
+    print("Mark all read status: ${response.statusCode}");
+  } catch (e) {
+    print("Mark all read error: $e");
   }
+}
 
   static Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) =>
       getGuidanceStudentReport(studentNo);

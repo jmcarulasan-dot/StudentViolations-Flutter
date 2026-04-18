@@ -52,6 +52,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 final isRead = notif.isRead;
 
                 return ListTile(
+                  onTap: () async {
+                    if (!isRead) {
+                      await Provider.of<ViolationProvider>(
+                          context, listen: false)
+                          .markNotificationAsRead(notif.id);
+                    }
+                  },
                   tileColor: isRead
                       ? Colors.grey[50]
                       : Colors.white,
