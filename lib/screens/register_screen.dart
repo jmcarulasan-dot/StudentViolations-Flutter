@@ -30,8 +30,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
 
-  // FIX: Values must match backend ValidYears = { "1", "2", "3", "4" }
-  // Display label → actual value sent to API
   final List<Map<String, String>> _yearLevels = [
     {'label': '1st Year', 'value': '1'},
     {'label': '2nd Year', 'value': '2'},
@@ -39,8 +37,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'label': '4th Year', 'value': '4'},
   ];
 
-  // FIX: Values must match backend ValidCourses = { "bsit", "bshm", "bsba" }
-  // Display label → actual value sent to API (API expects uppercase after trim)
   final List<Map<String, String>> _courses = [
     {'label': 'BSIT', 'value': 'BSIT'},
     {'label': 'BSHM', 'value': 'BSHM'},
@@ -77,7 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  // ── Header ─────────────────────────────────────────────
+                  //  Header 
                   Container(
                     width: 90, height: 90,
                     decoration: BoxDecoration(
@@ -122,7 +118,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Form Card ───────────────────────────────────────────
+                  // Form Card 
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -143,7 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
 
-                            // ── Role ────────────────────────────────────
+                            //  Role 
                             _sectionLabel('Select Role'),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<UserRole>(
@@ -172,7 +168,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // ── Personal Information ─────────────────────
+                            //Personal Information 
                             _sectionLabel('Personal Information'),
                             const SizedBox(height: 10),
                             _buildTextField(
@@ -219,7 +215,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            // ── Account Details ──────────────────────────
+                            // Account Details
                             _sectionLabel('Account Details'),
                             const SizedBox(height: 10),
                             _buildTextField(
@@ -288,7 +284,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
 
-                            // ── Student-only fields ──────────────────────
+                            // Student-only fields 
                             if (_selectedRole == UserRole.student) ...[
                               const SizedBox(height: 20),
                               _sectionLabel('Student Information'),
@@ -307,7 +303,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // FIX: Course dropdown uses correct backend values
                               DropdownButtonFormField<String>(
                                 value: _selectedCourse,
                                 dropdownColor: Colors.white,
@@ -328,7 +323,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // FIX: Year dropdown uses "1","2","3","4" as values
                               DropdownButtonFormField<String>(
                                 value: _selectedYear,
                                 dropdownColor: Colors.white,
@@ -368,7 +362,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                             const SizedBox(height: 28),
 
-                            // ── Register Button ──────────────────────────
+                            // Register Button 
                             Consumer<AuthProvider>(
                               builder: (context, authProvider, _) {
                                 if (authProvider.isLoading) {

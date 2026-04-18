@@ -78,7 +78,7 @@ class _StudentDashboardState extends State<StudentDashboard>
     );
   }
 
-  // ── Tab 1: Dashboard ────────────────────────────────────────────────────────
+  // Dashboard 
   Widget _buildDashboardTab(String name) {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -271,7 +271,7 @@ class _StudentDashboardState extends State<StudentDashboard>
     ]);
   }
 
-  // ── Tab 2: Profile ──────────────────────────────────────────────────────────
+  //Profile 
   Widget _buildProfileTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -379,7 +379,7 @@ class _StudentDashboardState extends State<StudentDashboard>
     ]);
   }
 
-  // ── Tab 3: QR Code ──────────────────────────────────────────────────────────
+  //  QR Code 
   Widget _buildQrCodeTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -459,7 +459,7 @@ class _StudentDashboardState extends State<StudentDashboard>
     );
   }
 
-  // ── Appeal Dialog ───────────────────────────────────────────────────────────
+  //  Appeal Dialog 
   void _showAppealDialog(String violationId) {
     _appealController.clear();
     showDialog(
@@ -532,7 +532,7 @@ class _StudentDashboardState extends State<StudentDashboard>
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  //  Helpers 
   Widget _statCard(String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -587,10 +587,10 @@ class _StudentDashboardState extends State<StudentDashboard>
 
    Color _warningColor(String level) {
     switch (level.toLowerCase()) {
-      case 'yellow':  return Colors.yellow.shade700; // Matches C# 1 violation
-      case 'orange':  return Colors.orange;          // Matches C# 2 violations
-      case 'red':     return _red;                  // Matches C# 3+ violations
-      default:         return Colors.green;            // Matches C# 0 violations
+      case 'yellow':  return Colors.yellow.shade700; 
+      case 'orange':  return Colors.orange;       
+      case 'red':     return _red;                  
+      default:         return Colors.green;           
     }
   }
 

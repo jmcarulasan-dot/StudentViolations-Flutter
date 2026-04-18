@@ -6,7 +6,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://192.168.254.148:5277';
+  static const String _baseUrl = 'http://10.39.8.11:5277';
 
   static void initialize() {}
 
@@ -40,10 +40,7 @@ class DatabaseService {
     };
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // AUTH
-  // ════════════════════════════════════════════════════════════════════════════
-
   // POST /api/auth/login
   static Future<User?> login(String username, String password) async {
     try {
@@ -57,7 +54,6 @@ class DatabaseService {
         await _saveToken(data['token']);
         await _saveStudentNo('');
 
-        // DECODE THE JWT TO GET THE REAL NAME
         final decodedToken = _decodeJwt(data['token']);
         final name = decodedToken['name']?.toString() ?? username;
         final id = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '';
@@ -67,7 +63,7 @@ class DatabaseService {
           id: id,
           username: username,
           password: '',
-          name: name, // Now says "Welcome, Jeff!" instead of "Welcome, Login successful!"
+          name: name,
           role: _parseRole(roleStr),
           studentNo: '',
         );
@@ -78,7 +74,6 @@ class DatabaseService {
     }
   }
 
-  // Make sure you add this helper method at the very bottom of the file!
   static Map<String, dynamic> _decodeJwt(String token) {
     final parts = token.split('.');
     if (parts.length != 3) return {};
@@ -149,11 +144,8 @@ class DatabaseService {
       throw Exception('Registration failed: $e');
     }
   }
-
-  // ════════════════════════════════════════════════════════════════════════════
+ 
   // STUDENT ENDPOINTS
-  // ════════════════════════════════════════════════════════════════════════════
-
   // GET /api/student/violations
   static Future<Map<String, dynamic>> getMyViolations() async {
     try {
@@ -246,10 +238,7 @@ class DatabaseService {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // GUARD ENDPOINTS
-  // ════════════════════════════════════════════════════════════════════════════
-
   // GET /api/guard/student/validate?studentNo=xxx
   static Future<Map<String, dynamic>?> validateStudent(String studentNo) async {
     try {
@@ -402,10 +391,7 @@ class DatabaseService {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // GUIDANCE ENDPOINTS
-  // ════════════════════════════════════════════════════════════════════════════
-
   // GET /api/guidance/students
   static Future<List<User>> getGuidanceStudents() async {
     try {
@@ -557,10 +543,7 @@ class DatabaseService {
     }
   }
 
-  // ════════════════════════════════════════════════════════════════════════════
   // SAO ENDPOINTS
-  // ════════════════════════════════════════════════════════════════════════════
-
   // GET /api/sao/violations
   static Future<List<Violation>> getSaoViolations() async {
     try {
@@ -814,10 +797,7 @@ class DatabaseService {
       throw Exception('Failed to delete user: $e');
     }
   }
-
-  // ════════════════════════════════════════════════════════════════════════════
   // HELPERS
-  // ════════════════════════════════════════════════════════════════════════════
 
   static List<Violation> _mapViolations(List violations) {
     return violations.map((v) => Violation(
@@ -921,7 +901,6 @@ class DatabaseService {
     } catch (_) {}
   }
 
-  // kept for compat
   static Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) =>
       getGuidanceStudentReport(studentNo);
 

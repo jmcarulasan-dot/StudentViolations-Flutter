@@ -47,7 +47,6 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'ACLC Student Violation System',
         debugShowCheckedModeBanner: false,
-        // Start at splash to check session before going to login or dashboard
         home: const SplashScreen(),
         routes: {
           '/login':     (context) => const LoginScreen(),
@@ -209,7 +208,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// ── Splash Screen — checks saved session before routing ───────────────────────
+// Splash Screen 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -267,7 +266,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// ── Dashboard Router ──────────────────────────────────────────────────────────
+//  Dashboard Router 
 class DashboardWrapper extends StatelessWidget {
   const DashboardWrapper({super.key});
 

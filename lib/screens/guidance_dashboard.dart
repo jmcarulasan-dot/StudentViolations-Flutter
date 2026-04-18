@@ -81,7 +81,7 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
     );
   }
 
-  // ── Tab 1: Students ─────────────────────────────────────────────────────────
+  // Students 
   Widget _buildStudentsTab(String name) {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -370,7 +370,7 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
     );
   }
 
-  // ── Tab 2: Pending ──────────────────────────────────────────────────────────
+  //  Pending 
   Widget _buildPendingTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -469,7 +469,7 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
     );
   }
 
-  // ── Tab 3: By Severity ──────────────────────────────────────────────────────
+  // By Severity
   Widget _buildBySeverityTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -619,7 +619,7 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
     );
   }
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
+  // Actions 
   Future<void> _searchReport() async {
     final studentNo = _searchController.text.trim();
     if (studentNo.isEmpty) {
@@ -749,7 +749,7 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // Helpers 
   Future<bool> _showConfirmDialog(String title, String message) async {
     final result = await showDialog<bool>(
       context: context,
@@ -840,10 +840,10 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
 
     Color _warningColor(String level) {
     switch (level.toLowerCase()) {
-      case 'yellow':  return Colors.yellow.shade700; // Matches C# 1 violation
-      case 'orange':  return Colors.orange;          // Matches C# 2 violations
-      case 'red':     return _red;                  // Matches C# 3+ violations
-      default:         return Colors.green;            // Matches C# 0 violations
+      case 'yellow':  return Colors.yellow.shade700; 
+      case 'orange':  return Colors.orange;        
+      case 'red':     return _red;                  
+      default:         return Colors.green;            
     }
   }
 

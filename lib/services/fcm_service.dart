@@ -5,13 +5,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Global plugin instance needed for background handler
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
-// ---------------------------------------------------------
-// BACKGROUND HANDLER (Fixed: Will show notification when app is killed)
-// ---------------------------------------------------------
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -54,32 +50,25 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-// ---------------------------------------------------------
 // MAIN SERVICE CLASS
-// ---------------------------------------------------------
 class FCMService {
-  // Make sure this IP matches your backend
-  static const String _baseUrl = 'http://192.168.254.148:5277';
+  static const String _baseUrl = 'http://10.39.8.11:5277';
 
   static Future<void> initialize() async {
-    // 1. Register background handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-    // 2. Request permissions
     await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
       sound: true,
     );
 
-    // 3. Setup local notifications for FOREGROUND
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
     await _localNotifications.initialize(initSettings);
 
-    // 4. Create Channel (Android)
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'violations_channel',
       'Violation Notifications',
@@ -90,7 +79,6 @@ class FCMService {
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
-    // 5. Listen to messages while app is OPEN (Foreground)
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final notification = message.notification;
       if (notification != null) {
@@ -111,10 +99,8 @@ class FCMService {
       }
     });
 
-    // 6. Get and Save Token immediately on startup
     await _saveTokenToBackend();
 
-    // 7. Listen for token refreshes
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       await _sendTokenToBackend(newToken);
     });
@@ -123,13 +109,6 @@ class FCMService {
   static Future<void> _saveTokenToBackend() async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
-      
-      // ============================================
-      // THIS PRINTS YOUR TOKEN TO THE CONSOLE
-      // ============================================
-      print("==========================================");
-      print("YOUR FCM TOKEN IS: $token");
-      print("==========================================");
 
       if (token != null) {
         await _sendTokenToBackend(token);
@@ -139,7 +118,7 @@ class FCMService {
     }
   }
 
-  static Future<void> _sendTokenToBackend(String fcmToken) async {
+    static Future<void> _sendTokenToBackend(String fcmToken) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jwtToken = prefs.getString('jwt_token');
@@ -155,20 +134,19 @@ class FCMService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $jwtToken',
         },
-        body: jsonEncode({'fcmToken': fcmToken}),
+        body: jsonEncode({'FCMToken': fcmToken}),
       );
 
       if (response.statusCode == 200) {
-        print("Token saved to backend successfully!");
+        print(" Token saved to backend successfully!");
       } else {
-        print("Failed to save token. Status: ${response.statusCode}");
+        print(" Failed to save token. Status: ${response.statusCode}");
       }
     } catch (e) {
       print('Failed to send FCM token to backend: $e');
     }
   }
 
-  // Call this after login if you want to be extra sure the token is sent
   static Future<void> registerTokenAfterLogin() async {
     await _saveTokenToBackend();
   }

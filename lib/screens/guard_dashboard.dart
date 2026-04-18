@@ -148,7 +148,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     }
   }
 
-  // ── Record Tab ──────────────────────────────────────────────────────────────
+  //Record Tab 
   Widget _buildRecordTab() {
     final name = Provider.of<AuthProvider>(context, listen: false).currentUser?.name ?? 'Guard';
     return Consumer<ViolationProvider>(
@@ -282,7 +282,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // ── History Tab ─────────────────────────────────────────────────────────────
+  // History Tab 
   Widget _buildHistoryTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -361,7 +361,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // ── Summary Tab ─────────────────────────────────────────────────────────────
+  // Summary Tab 
   Widget _buildSummaryTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -434,7 +434,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // ── Students Tab ────────────────────────────────────────────────────────────
+  // Students Tab 
   Widget _buildStudentsTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -501,7 +501,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // ── Validate Dialog ─────────────────────────────────────────────────────────
+  // Validate Dialog
   void _showValidateDialog() {
     _validateController.clear();
     _validateResult = {};
@@ -646,7 +646,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
+  // Actions 
   Future<void> _submitViolation() async {
     if (_selectedStudentNo == null) {
       _showSnack('Please select a student', isError: true);
@@ -727,7 +727,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     }
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // Helpers
   ViolationType _parseViolationType(String type) {
     final t = type.toLowerCase();
     if (t.contains('uniform')) return ViolationType.noUniform;

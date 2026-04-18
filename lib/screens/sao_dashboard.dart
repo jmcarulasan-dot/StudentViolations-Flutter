@@ -81,7 +81,7 @@ class _SAODashboardState extends State<SAODashboard>
     );
   }
 
-  // ── Tab 1: Violations ───────────────────────────────────────────────────────
+  // Violations 
   Widget _buildViolationsTab(String name) {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -157,7 +157,6 @@ class _SAODashboardState extends State<SAODashboard>
               ]),
               const SizedBox(height: 16),
 
-              // Filter chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(children: [
@@ -309,7 +308,7 @@ class _SAODashboardState extends State<SAODashboard>
     );
   }
 
-  // ── Tab 2: Summary ──────────────────────────────────────────────────────────
+  // Summary 
   Widget _buildSummaryTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -512,7 +511,7 @@ class _SAODashboardState extends State<SAODashboard>
     );
   }
 
-  // ── Tab 3: Users ────────────────────────────────────────────────────────────
+  // Users 
   Widget _buildUsersTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -566,7 +565,7 @@ class _SAODashboardState extends State<SAODashboard>
     ]);
   }
 
-  // ── Actions ─────────────────────────────────────────────────────────────────
+  // Actions 
   Future<void> _approveViolation(String id, ViolationProvider vp) async {
     await vp.approveViolation(id);
     _showSnack(vp.error == null
@@ -723,7 +722,7 @@ class _SAODashboardState extends State<SAODashboard>
     );
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // Helpers 
   Future<bool> _showConfirmDialog(String title, String message) async {
     final result = await showDialog<bool>(
       context: context,
