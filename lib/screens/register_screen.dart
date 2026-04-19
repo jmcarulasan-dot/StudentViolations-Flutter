@@ -445,82 +445,80 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() async {
-    if (_formKey.currentState!.validate() && _selectedRole != null) {
-      final authProvider =
-          Provider.of<AuthProvider>(context, listen: false);
+  if (_formKey.currentState!.validate() && _selectedRole != null) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      await authProvider.register(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text,
-        name: _nameController.text.trim(),
-        role: _selectedRole!,
-        email: _emailController.text.trim(),
-        address: _addressController.text.trim(),
-        contactNumber: _selectedRole == UserRole.student
-            ? _contactController.text.trim()
-            : null,
-        studentNo: _selectedRole == UserRole.student
-            ? _studentNoController.text.trim()
-            : null,
-        // FIX: _selectedCourse and _selectedYear now already hold correct values
-        course: _selectedRole == UserRole.student ? _selectedCourse : null,
-        year: _selectedRole == UserRole.student ? _selectedYear : null,
-      );
+    await authProvider.register(
+      username:      _usernameController.text.trim(),
+      password:      _passwordController.text,
+      name:          _nameController.text.trim(),
+      role:          _selectedRole!,
+      email:         _emailController.text.trim(),
+      address:       _addressController.text.trim(),
+      gender:        'male',         // default — add a dropdown later if needed
+      dateOfBirth:   '2000-01-01',   // default — add a date picker later if needed
+      contactNumber: _selectedRole == UserRole.student
+          ? _contactController.text.trim()
+          : null,
+      studentNo: _selectedRole == UserRole.student
+          ? _studentNoController.text.trim()
+          : null,
+      course: _selectedRole == UserRole.student ? _selectedCourse : null,
+      year:   _selectedRole == UserRole.student ? _selectedYear : null,
+    );
 
-      if (authProvider.currentUser != null) {
-        await authProvider.logout();
-        if (mounted) {
-          _formKey.currentState!.reset();
-          _nameController.clear();
-          _usernameController.clear();
-          _emailController.clear();
-          _passwordController.clear();
-          _confirmPasswordController.clear();
-          _contactController.clear();
-          _studentNoController.clear();
-          _addressController.clear();
-          setState(() {
-            _selectedRole   = null;
-            _selectedYear   = null;
-            _selectedCourse = null;
-          });
+    if (authProvider.currentUser != null) {
+      await authProvider.logout();
+      if (mounted) {
+        _formKey.currentState!.reset();
+        _nameController.clear();
+        _usernameController.clear();
+        _emailController.clear();
+        _passwordController.clear();
+        _confirmPasswordController.clear();
+        _contactController.clear();
+        _studentNoController.clear();
+        _addressController.clear();
+        setState(() {
+          _selectedRole   = null;
+          _selectedYear   = null;
+          _selectedCourse = null;
+        });
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Row(children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Registration successful! Please log in.',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ]),
-              backgroundColor: Colors.green,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(16),
-              duration: const Duration(seconds: 3),
-            ),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Registration successful! Please log in.',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+            ]),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 3),
+          ),
+        );
 
-          Navigator.of(context).pushReplacementNamed('/login');
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? 'Registration failed'),
-              backgroundColor: _red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        }
+        Navigator.of(context).pushReplacementNamed('/login');
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            // ✅ Now shows the real error from the API instead of generic message
+            content: Text(authProvider.error ?? 'Registration failed. Please try again.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
       }
     }
   }
+}
 
   Widget _sectionLabel(String text) {
     return Text(text,

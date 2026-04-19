@@ -39,54 +39,54 @@ class AuthProvider with ChangeNotifier {
 
   // REGISTER
   Future<void> register({
-    required String username,
-    required String password,
-    required String name,
-    required UserRole role,
-    String? contactNumber,
-    String? studentNo,
-    String? course,
-    String? year,
-    String? email,
-    String? gender,
-    String? dateOfBirth,
-    String? address,
-  }) async {
-    _setLoading(true);
-    _error = null;
+  required String username,
+  required String password,
+  required String name,
+  required UserRole role,
+  String? email,
+  String? address,
+  String? contactNumber,
+  String? studentNo,
+  String? gender,
+  String? dateOfBirth,
+  String? course,
+  String? year,
+}) async {
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
 
-    try {
-      final user = await DatabaseService.register(
-        username: username,
-        password: password,
-        name: name,
-        role: role,
-        contactNumber: contactNumber,
-        studentNo: studentNo,
-        course: course,
-        year: year,
-        email: email,
-        gender: gender,
-        dateOfBirth: dateOfBirth,
-        address: address,
-      );
+  try {
+    final result = await DatabaseService.register(
+      username:      username,
+      password:      password,
+      name:          name,
+      role:          role,
+      email:         email,
+      address:       address,
+      contactNumber: contactNumber,
+      studentNo:     studentNo,
+      gender:        gender,
+      dateOfBirth:   dateOfBirth,
+      course:        course,
+      year:          year,
+    );
 
-      if (user != null) {
-        _currentUser = user;
-        await _saveSession(user);
-        notifyListeners();
-      } else {
-        _error = 'Registration failed. Username or email may already exist.';
-        notifyListeners();
-      }
-    } catch (e) {
-      _error = 'Registration failed: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
+    if (result['success'] == true) {
+      _currentUser = result['user'] as User;
+      _error = null;
+    } else {
+      _currentUser = null;
+      _error = result['message']; 
     }
+  } catch (e) {
+    _currentUser = null;
+    _error = e.toString();
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
-
+}
   // LOGOUT 
   Future<void> logout() async {
     _currentUser = null;

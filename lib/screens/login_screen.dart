@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../models/user.dart';
 import '../services/fcm_service.dart';
 
 const _red  = Color(0xFFFD070C);

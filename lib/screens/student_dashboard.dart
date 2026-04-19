@@ -237,6 +237,8 @@ class _StudentDashboardState extends State<StudentDashboard>
     final status  = violation.statusDescription;
     final severity = violation.severity ?? 'minor';
 
+    
+
     return Column(children: [
       ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -253,16 +255,15 @@ class _StudentDashboardState extends State<StudentDashboard>
             Row(children: [
               _statusChip(status),
               const Spacer(),
-              if (status == 'Pending')
-                TextButton(
-                  onPressed: () => _showAppealDialog(violation.id),
-                  style: TextButton.styleFrom(
-                    foregroundColor: _navy,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
-                  child: const Text('Appeal',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              TextButton(
+                onPressed: () => _showAppealDialog(violation.id),
+                style: TextButton.styleFrom(
+                  foregroundColor: _navy,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
+                child: const Text('Appeal',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              ),
             ]),
           ],
         ),

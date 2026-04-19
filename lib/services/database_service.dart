@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
@@ -40,6 +41,39 @@ class DatabaseService {
     };
   }
 
+  // FCM TOKEN
+  static Future<void> _saveTokenToBackend() async {
+    try {
+      final jwtToken = await _getToken();
+      if (jwtToken == null) {
+        print('Cannot save FCM token: JWT missing');
+        return;
+      }
+
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken == null) {
+        print('Cannot save FCM token: FCM token is null');
+        return;
+      }
+
+      print('=== Saving FCM token to backend ===');
+      print('=== FCM TOKEN: $fcmToken ===');
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/notifications/fcm-token'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwtToken',
+        },
+        body: jsonEncode({'FCMToken': fcmToken}),
+      );
+
+      print('FCM token save status: ${response.statusCode}');
+    } catch (e) {
+      print('Failed to save FCM token: $e');
+    }
+  }
+
   // AUTH
   // POST /api/auth/login
   static Future<User?> login(String username, String password) async {
@@ -53,6 +87,9 @@ class DatabaseService {
       if (response.statusCode == 200 && data['status'] == 200) {
         await _saveToken(data['token']);
         await _saveStudentNo('');
+
+        // ✅ Save FCM token right after login (JWT is now available)
+        await _saveTokenToBackend();
 
         final decodedToken = _decodeJwt(data['token']);
         final name = decodedToken['name']?.toString() ?? username;
@@ -87,8 +124,9 @@ class DatabaseService {
     final decoded = utf8.decode(base64.decode(payload));
     return jsonDecode(decoded);
   }
+
   // POST /api/auth/register
-  static Future<User?> register({
+  static Future<Map<String, dynamic>> register({
     required String username,
     required String password,
     required String name,
@@ -108,43 +146,60 @@ class DatabaseService {
       if (year != null) {
         yearNum = year.replaceAll(RegExp(r'[^0-9]'), '');
       }
+
+      final nameParts = name.trim().split(' ');
+      final firstName = nameParts.first;
+      final lastName = nameParts.length > 1 ? nameParts.skip(1).join(' ') : firstName;
+
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username':      username,
-          'password':      password,
-          'name':          name,
-          'email':         email ?? '$username@aclc.com',
-          'gender':        (gender ?? 'male').toLowerCase(),
-          'dateOfBirth':   dateOfBirth ?? '2000-01-01',
-          'address':       address ?? '',
-          'number': contactNumber ?? '',
-          'role':          role.name,
-          'course':        course,
-          'year':          yearNum,
-          'studentNo':     studentNo,
-          'age':           18,
+          'username':    username,
+          'password':    password,
+          'firstName':   firstName,
+          'lastName':    lastName,
+          'email':       email ?? '$username@aclc.com',
+          'gender':      (gender ?? 'male').toLowerCase(),
+          'dateOfBirth': dateOfBirth ?? '2000-01-01',
+          'address':     address ?? '',
+          'number':      contactNumber ?? '',
+          'role':        role.name,
+          'course':      course,
+          'year':        yearNum,
+          'studentNo':   studentNo,
         }),
       );
+
       final data = jsonDecode(response.body);
+
       if (response.statusCode == 200 && data['status'] == 200) {
-        return User(
-          id:            '',
-          username:      username,
-          password:      '',
-          name:          name,
-          role:          role,
-          contactNumber: contactNumber,
-          studentNo:     studentNo,
-        );
+        return {
+          'success': true,
+          'user': User(
+            id:            '',
+            username:      username,
+            password:      '',
+            name:          name,
+            role:          role,
+            contactNumber: contactNumber,
+            studentNo:     studentNo,
+          ),
+        };
       }
-      return null;
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Registration failed. Please try again.',
+      };
     } catch (e) {
-      throw Exception('Registration failed: $e');
+      return {
+        'success': false,
+        'message': 'Network error. Please check your connection.',
+      };
     }
   }
- 
+
   // STUDENT ENDPOINTS
   // GET /api/student/violations
   static Future<Map<String, dynamic>> getMyViolations() async {
@@ -224,19 +279,19 @@ class DatabaseService {
 
   // POST /api/student/violations/{id}/appeal
   static Future<bool> submitAppeal(String violationId, String appealText) async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/student/violations/$violationId/appeal'),
-        headers: headers,
-        body: jsonEncode(appealText),
-      );
-      final data = jsonDecode(response.body);
-      return response.statusCode == 200 && data['status'] == 200;
-    } catch (e) {
-      throw Exception('Failed to submit appeal: $e');
-    }
+  try {
+    final headers = await _authHeaders();
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/student/violations/$violationId/appeal'),
+      headers: headers,
+      body: jsonEncode({'appealText': appealText}), 
+    );
+    final data = jsonDecode(response.body);
+    return response.statusCode == 200 && data['status'] == 200;
+  } catch (e) {
+    throw Exception('Failed to submit appeal: $e');
   }
+}
 
   // GUARD ENDPOINTS
   // GET /api/guard/student/validate?studentNo=xxx
@@ -361,7 +416,7 @@ class DatabaseService {
     }
   }
 
-  // GET /api/guard/violations/student?studentNo=xxx  (history tab)
+  // GET /api/guard/violations/student?studentNo=xxx
   static Future<List<Violation>> getViolationsByStudent(String studentNo) async {
     try {
       final headers = await _authHeaders();
@@ -437,7 +492,7 @@ class DatabaseService {
     }
   }
 
-  // GET /api/guidance/violations/by-status  (pending tab)
+  // GET /api/guidance/violations/by-status
   static Future<List<Violation>> getAllViolations() async {
     try {
       final headers = await _authHeaders();
@@ -797,8 +852,8 @@ class DatabaseService {
       throw Exception('Failed to delete user: $e');
     }
   }
-  // HELPERS
 
+  // HELPERS
   static List<Violation> _mapViolations(List violations) {
     return violations.map((v) => Violation(
       id:            v['id'].toString(),
@@ -826,9 +881,9 @@ class DatabaseService {
 
   static ViolationType _parseViolationType(String? type) {
     final t = (type ?? '').toLowerCase();
-    if (t.contains('uniform'))                                              return ViolationType.noUniform;
-    if (t.contains('piercing') || t.contains('earring'))                   return ViolationType.piercing;
-    if (t.contains('hair') || t.contains('color'))                         return ViolationType.coloredHair;
+    if (t.contains('uniform'))                             return ViolationType.noUniform;
+    if (t.contains('piercing') || t.contains('earring'))  return ViolationType.piercing;
+    if (t.contains('hair') || t.contains('color'))        return ViolationType.coloredHair;
     return ViolationType.noId;
   }
 
@@ -881,32 +936,32 @@ class DatabaseService {
       return [];
     }
   }
-  // PUT /api/notifications/{id}/read
-  // PUT /api/notifications/{id}/read
-static Future<void> markNotificationAsRead(int id) async {
-  try {
-    final response = await http.put(
-      Uri.parse('$_baseUrl/api/notifications/$id/read'),
-      headers: await _authHeaders(),
-    );
-    print("Mark as read status: ${response.statusCode}");
-  } catch (e) {
-    print("Mark as read error: $e");
-  }
-}
 
-// PUT /api/notifications/read-all
-static Future<void> markAllNotificationsAsRead() async {
-  try {
-    final response = await http.put(
-      Uri.parse('$_baseUrl/api/notifications/read-all'),
-      headers: await _authHeaders(),
-    );
-    print("Mark all read status: ${response.statusCode}");
-  } catch (e) {
-    print("Mark all read error: $e");
+  // PUT /api/notifications/{id}/read
+  static Future<void> markNotificationAsRead(int id) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/api/notifications/$id/read'),
+        headers: await _authHeaders(),
+      );
+      print('Mark as read status: ${response.statusCode}');
+    } catch (e) {
+      print('Mark as read error: $e');
+    }
   }
-}
+
+  // PUT /api/notifications/read-all
+  static Future<void> markAllNotificationsAsRead() async {
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/api/notifications/read-all'),
+        headers: await _authHeaders(),
+      );
+      print('Mark all read status: ${response.statusCode}');
+    } catch (e) {
+      print('Mark all read error: $e');
+    }
+  }
 
   static Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) =>
       getGuidanceStudentReport(studentNo);
