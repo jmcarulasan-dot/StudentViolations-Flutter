@@ -1174,14 +1174,10 @@ class _GuardDashboardState extends State<GuardDashboard> {
 
   Color _warningColor(String? level) {
     switch ((level ?? '').toLowerCase()) {
-      case 'warning':
-        return Colors.yellow.shade700;
-      case 'danger':
-        return Colors.orange;
-      case 'critical':
-        return _red;
-      default:
-        return Colors.green;
+      case 'yellow':  return Colors.yellow.shade700; // 1 violation
+      case 'orange':  return Colors.orange;          // 2 violations
+      case 'red':     return _red;                   // 3+ violations
+      default:        return Colors.green;           // 0 violations
     }
   }
 

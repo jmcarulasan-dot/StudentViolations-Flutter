@@ -597,19 +597,19 @@ class _StudentDashboardState extends State<StudentDashboard>
 
   IconData _warningIcon(String level) {
     switch (level.toLowerCase()) {
-      case 'warning':  return Icons.warning_rounded;
-      case 'danger':   return Icons.error_rounded;
-      case 'critical': return Icons.dangerous_rounded;
-      default:         return Icons.check_circle_rounded;
+      case 'yellow':  return Icons.warning_rounded;
+      case 'orange':  return Icons.error_rounded;
+      case 'red':     return Icons.dangerous_rounded;
+      default:        return Icons.check_circle_rounded;
     }
   }
-
+ 
   String _warningAction(String level) {
     switch (level.toLowerCase()) {
-      case 'warning':  return 'Issue written warning';
-      case 'danger':   return 'Call parents / schedule counseling';
-      case 'critical': return 'Recommended for dismissal';
-      default:         return 'No action needed';
+      case 'yellow':  return 'Issue written warning';
+      case 'orange':  return 'Call parents / schedule counseling';
+      case 'red':     return 'Recommended for dismissal';
+      default:        return 'No action needed';
     }
   }
 

@@ -27,6 +27,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   UserRole? _selectedRole;
   String?   _selectedYear;
   String?   _selectedCourse;
+  String?   _selectedGender;
+  DateTime? _selectedDateOfBirth;
   bool _obscurePassword        = true;
   bool _obscureConfirmPassword = true;
 
@@ -43,6 +45,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'label': 'BSBA', 'value': 'BSBA'},
   ];
 
+  final List<Map<String, String>> _genders = [
+    {'label': 'Male', 'value': 'male'},
+    {'label': 'Female', 'value': 'female'},
+  ];
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -54,6 +61,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _studentNoController.dispose();
     _addressController.dispose();
     super.dispose();
+  }
+
+  // Date picker helper
+  Future<void> _pickDateOfBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1950),
+      lastDate: DateTime(now.year - 15, now.month, now.day),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.light(primary: _navy),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) {
+      setState(() => _selectedDateOfBirth = picked);
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -73,7 +104,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  //  Header 
+                  // Header
                   Container(
                     width: 90, height: 90,
                     decoration: BoxDecoration(
@@ -118,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Form Card 
+                  // Form Card
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -139,7 +170,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
 
-                            //  Role 
+                            // Role
                             _sectionLabel('Select Role'),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<UserRole>(
@@ -168,9 +199,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             const SizedBox(height: 20),
 
-                            //Personal Information 
+                            // Personal Information
                             _sectionLabel('Personal Information'),
                             const SizedBox(height: 10),
+
                             _buildTextField(
                               controller: _nameController,
                               label: 'Full Name',
@@ -193,12 +225,85 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (v) {
                                 if (v == null || v.isEmpty)
                                   return 'Please enter your email';
-                                if (!RegExp(
-                                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
                                     .hasMatch(v))
                                   return 'Please enter a valid email address';
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Gender — required for ALL roles
+                            DropdownButtonFormField<String>(
+                              value: _selectedGender,
+                              dropdownColor: Colors.white,
+                              iconEnabledColor: _navy,
+                              style: const TextStyle(
+                                  color: Colors.black87, fontSize: 14),
+                              decoration: _dropdownDecoration(
+                                  'Gender', Icons.person_rounded),
+                              hint: const Text('Select gender'),
+                              items: _genders.map((g) => DropdownMenuItem(
+                                value: g['value'],
+                                child: Text(g['label']!),
+                              )).toList(),
+                              onChanged: (value) =>
+                                  setState(() => _selectedGender = value),
+                              validator: (v) =>
+                                  v == null ? 'Please select your gender' : null,
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Date of Birth — required for ALL roles
+                            GestureDetector(
+                              onTap: _pickDateOfBirth,
+                              child: AbsorbPointer(
+                                child: TextFormField(
+                                  readOnly: true,
+                                  style: const TextStyle(fontSize: 14,
+                                      color: Colors.black87),
+                                  decoration: InputDecoration(
+                                    labelText: 'Date of Birth',
+                                    labelStyle: const TextStyle(
+                                        fontSize: 14, color: Colors.black45),
+                                    prefixIcon: const Icon(
+                                        Icons.calendar_today_rounded,
+                                        color: _navy, size: 20),
+                                    hintText: 'Select your date of birth',
+                                    filled: true,
+                                    fillColor: const Color(0xFFF7F8FC),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFDDE1EE))),
+                                    enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: Color(0xFFDDE1EE))),
+                                    focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: _navy, width: 1.8)),
+                                    errorBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                        borderSide: const BorderSide(
+                                            color: _red, width: 1.5)),
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 14),
+                                  ),
+                                  controller: TextEditingController(
+                                    text: _selectedDateOfBirth != null
+                                        ? _formatDate(_selectedDateOfBirth!)
+                                        : '',
+                                  ),
+                                  validator: (_) {
+                                    if (_selectedDateOfBirth == null)
+                                      return 'Please select your date of birth';
+                                    return null;
+                                  },
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 16),
 
@@ -213,11 +318,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 return null;
                               },
                             ),
+                            const SizedBox(height: 16),
+
+                            // Contact Number — required for ALL roles
+                            _buildTextField(
+                              controller: _contactController,
+                              label: 'Contact Number',
+                              icon: Icons.phone_outlined,
+                              hint: 'e.g., 09123456789',
+                              keyboardType: TextInputType.phone,
+                              validator: (v) {
+                                if (v == null || v.isEmpty)
+                                  return 'Please enter your contact number';
+                                if (!RegExp(r'^09\d{9}$').hasMatch(v))
+                                  return 'Must start with 09 and be 11 digits';
+                                return null;
+                              },
+                            ),
                             const SizedBox(height: 20),
 
                             // Account Details
                             _sectionLabel('Account Details'),
                             const SizedBox(height: 10),
+
                             _buildTextField(
                               controller: _usernameController,
                               label: 'Username',
@@ -284,7 +407,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
 
-                            // Student-only fields 
+                            // Student-only fields
                             if (_selectedRole == UserRole.student) ...[
                               const SizedBox(height: 20),
                               _sectionLabel('Student Information'),
@@ -342,27 +465,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 validator: (v) =>
                                     v == null ? 'Please select your year level' : null,
                               ),
-                              const SizedBox(height: 16),
-
-                              _buildTextField(
-                                controller: _contactController,
-                                label: 'Contact Number',
-                                icon: Icons.phone_outlined,
-                                hint: 'e.g., 09123456789',
-                                keyboardType: TextInputType.phone,
-                                validator: (v) {
-                                  if (v == null || v.isEmpty)
-                                    return 'Please enter your contact number';
-                                  if (!RegExp(r'^09\d{9}$').hasMatch(v))
-                                    return 'Must start with 09 and be 11 digits';
-                                  return null;
-                                },
-                              ),
                             ],
 
                             const SizedBox(height: 28),
 
-                            // Register Button 
+                            // Register Button
                             Consumer<AuthProvider>(
                               builder: (context, authProvider, _) {
                                 if (authProvider.isLoading) {
@@ -445,80 +552,101 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() async {
-  if (_formKey.currentState!.validate() && _selectedRole != null) {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    await authProvider.register(
-      username:      _usernameController.text.trim(),
-      password:      _passwordController.text,
-      name:          _nameController.text.trim(),
-      role:          _selectedRole!,
-      email:         _emailController.text.trim(),
-      address:       _addressController.text.trim(),
-      gender:        'male',         // default — add a dropdown later if needed
-      dateOfBirth:   '2000-01-01',   // default — add a date picker later if needed
-      contactNumber: _selectedRole == UserRole.student
-          ? _contactController.text.trim()
-          : null,
-      studentNo: _selectedRole == UserRole.student
-          ? _studentNoController.text.trim()
-          : null,
-      course: _selectedRole == UserRole.student ? _selectedCourse : null,
-      year:   _selectedRole == UserRole.student ? _selectedYear : null,
-    );
-
-    if (authProvider.currentUser != null) {
-      await authProvider.logout();
-      if (mounted) {
-        _formKey.currentState!.reset();
-        _nameController.clear();
-        _usernameController.clear();
-        _emailController.clear();
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-        _contactController.clear();
-        _studentNoController.clear();
-        _addressController.clear();
-        setState(() {
-          _selectedRole   = null;
-          _selectedYear   = null;
-          _selectedCourse = null;
-        });
-
+    if (_formKey.currentState!.validate() && _selectedRole != null) {
+      // Extra check for date of birth since it's not a TextFormField
+      if (_selectedDateOfBirth == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('Registration successful! Please log in.',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-            ]),
-            backgroundColor: Colors.green,
+            content: const Text('Please select your date of birth'),
+            backgroundColor: _red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 3),
           ),
         );
-
-        Navigator.of(context).pushReplacementNamed('/login');
+        return;
       }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            // ✅ Now shows the real error from the API instead of generic message
-            content: Text(authProvider.error ?? 'Registration failed. Please try again.'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      await authProvider.register(
+        username:      _usernameController.text.trim(),
+        password:      _passwordController.text,
+        name:          _nameController.text.trim(),
+        role:          _selectedRole!,
+        email:         _emailController.text.trim(),
+        address:       _addressController.text.trim(),
+        gender:        _selectedGender!,
+        dateOfBirth:   _formatDate(_selectedDateOfBirth!),
+        contactNumber: _contactController.text.trim(),
+        studentNo: _selectedRole == UserRole.student
+            ? _studentNoController.text.trim()
+            : null,
+        course: _selectedRole == UserRole.student ? _selectedCourse : null,
+        year:   _selectedRole == UserRole.student ? _selectedYear : null,
+      );
+
+      if (authProvider.currentUser != null) {
+        // Logout immediately after register — user must login manually
+        await authProvider.logout();
+
+        if (mounted) {
+          // Clear all fields
+          _formKey.currentState!.reset();
+          _nameController.clear();
+          _usernameController.clear();
+          _emailController.clear();
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+          _contactController.clear();
+          _studentNoController.clear();
+          _addressController.clear();
+          setState(() {
+            _selectedRole        = null;
+            _selectedYear        = null;
+            _selectedCourse      = null;
+            _selectedGender      = null;
+            _selectedDateOfBirth = null;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(children: [
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('Registration successful! Please log in.',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ]),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+
+          Navigator.of(context).pushReplacementNamed('/login');
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.error ??
+                  'Registration failed. Please try again.'),
+              backgroundColor: _red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
       }
     }
   }
-}
 
   Widget _sectionLabel(String text) {
     return Text(text,
