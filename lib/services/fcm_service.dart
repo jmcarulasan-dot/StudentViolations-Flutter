@@ -52,7 +52,7 @@
 
   // MAIN SERVICE CLASS
   class FCMService {
-    static const String _baseUrl = 'http://10.39.8.11:5277';
+    static const String _baseUrl = 'http://10.91.53.11:5277';
 
     static Future<void> initialize() async {
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

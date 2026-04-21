@@ -7,7 +7,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.39.8.11:5277';
+  static const String _baseUrl = 'http://10.91.53.11:5277';
 
   static void initialize() {}
 
@@ -59,7 +59,7 @@ class DatabaseService {
         body: jsonEncode({'FCMToken': fcmToken}),
       );
     } catch (e) {
-      // FCM token save failure should not crash the app
+      
     }
   }
 
@@ -78,7 +78,7 @@ class DatabaseService {
         await _saveToken(data['token']);
         await _saveStudentNo('');
 
-        // Save FCM token right after login (JWT is now available)
+        // Save FCM token right after login
         await _saveTokenToBackend();
 
         final decodedToken = _decodeJwt(data['token']);
@@ -87,6 +87,8 @@ class DatabaseService {
                 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
             ?.toString() ?? '';
 
+        final studentNo = decodedToken['studentNo']?.toString() ?? '';
+
         final roleStr = (data['role'] as String).toLowerCase();
         return User(
           id:        id,
@@ -94,7 +96,7 @@ class DatabaseService {
           password:  '',
           name:      name,
           role:      _parseRole(roleStr),
-          studentNo: '',
+          studentNo: studentNo,
         );
       }
       return null;
@@ -346,8 +348,6 @@ class DatabaseService {
   }
 
   // GET /api/guard/violations/summary?StartDate=xxx&EndDate=xxx
-  // FIX #4: API returns camelCase keys (totalViolations, topViolation)
-  // so we read them as camelCase, not snake_case
   static Future<Map<String, dynamic>> getViolationSummary(
       String startDate, String endDate) async {
     try {
@@ -361,7 +361,6 @@ class DatabaseService {
       if (response.statusCode == 200 && data['status'] == 200) {
         final d = data['data'];
         return {
-          // FIX: API returns camelCase — read camelCase keys directly
           'totalViolations': d['totalViolations'] ?? 0,
           'topViolation':    d['topViolation'] ?? 'N/A',
           'startDate':       d['startDate'] ?? startDate,
@@ -494,9 +493,7 @@ class DatabaseService {
     }
   }
 
-  // FIX #3: getAllViolations was calling wrong endpoint with wrong params.
-  // GET /api/guidance/violations/by-status returns ALL statuses grouped.
-  // We flatten all groups into a single list here for the provider.
+  // GET /api/guidance/violations/by-status — flattens all groups into one list
   static Future<List<Violation>> getAllViolations() async {
     try {
       final headers = await _authHeaders();
@@ -531,7 +528,6 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final List groups = data['data'];
-        // Find the Pending group and return only those violations
         for (final group in groups) {
           if ((group['status'] ?? '').toString().toLowerCase() == 'pending') {
             return _mapViolations(group['violations'] ?? []);
@@ -596,14 +592,13 @@ class DatabaseService {
     }
   }
 
-  // FIX #5: GuidanceController uses [HttpPost] for appeal review.
-  // Flutter must use http.post to match — keeping as POST here.
-  // POST /api/guidance/violations/{id}/appeal/review
+  // FIX: GuidanceController uses [HttpPut] — changed from http.post to http.put
+  // PUT /api/guidance/violations/{id}/appeal/review
   static Future<bool> guidanceReviewAppeal(
       String violationId, String appealStatus, String appealRemarks) async {
     try {
       final headers = await _authHeaders();
-      final response = await http.post(
+      final response = await http.put(
         Uri.parse(
             '$_baseUrl/api/guidance/violations/$violationId/appeal/review'),
         headers: headers,

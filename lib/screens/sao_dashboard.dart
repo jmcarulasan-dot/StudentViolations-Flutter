@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
+import '../models/user.dart';
 
 const _red  = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -19,6 +20,7 @@ class _SAODashboardState extends State<SAODashboard>
   final _reportController = TextEditingController();
   final _remarkController = TextEditingController();
   Map<String, dynamic> _studentReport = {};
+
 
   @override
   void initState() {
@@ -539,8 +541,26 @@ class _SAODashboardState extends State<SAODashboard>
     );
   }
 
+  String _roleLabel(String role) {
+    if (role.isEmpty) return 'Unknown';
+    switch (role.toLowerCase()) {
+      case 'sao':
+        return 'SAO';
+      case 'guard':
+        return 'Guard';
+      case 'guidance':
+        return 'Guidance';
+      case 'admin':
+        return 'Admin';
+      default:
+        return role;
+    }
+  }
+
   Widget _userTile(user, ViolationProvider vp) {
-    final roleColor = _roleColor(user.role.name);
+    final roleDisplay = _roleLabel(user.role.toString().split('.').last);
+final roleColor = _roleColor(roleDisplay);
+
     return Column(children: [
       ListTile(
         leading: CircleAvatar(
@@ -553,7 +573,7 @@ class _SAODashboardState extends State<SAODashboard>
         ),
         title: Text(user.name,
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-        subtitle: Text('@${user.username} • ${user.role.name.toUpperCase()}',
+        subtitle: Text('@${user.username} • ${roleDisplay.toUpperCase()}',
             style: const TextStyle(fontSize: 12, color: Colors.black45)),
         trailing: IconButton(
           icon: Icon(Icons.delete_rounded,
@@ -564,6 +584,7 @@ class _SAODashboardState extends State<SAODashboard>
       const Divider(height: 1, indent: 56),
     ]);
   }
+  
 
   // Actions 
   Future<void> _approveViolation(String id, ViolationProvider vp) async {
