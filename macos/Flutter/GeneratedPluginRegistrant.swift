@@ -8,7 +8,6 @@ import Foundation
 import firebase_core
 import firebase_messaging
 import flutter_local_notifications
-import mobile_scanner
 import shared_preferences_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
