@@ -19,14 +19,15 @@ class NotificationModel {
 
   factory NotificationModel.fromMap(Map<String, dynamic> map) {
     return NotificationModel(
-      id:             map['Id'] ?? map['id'] ?? 0,
+      id: map['Id'] ?? map['id'] ?? 0,
       targetUsername: map['TargetUsername'] ?? map['targetUsername'],
-      targetRole:     map['TargetRole'] ?? map['targetRole'],
-      title:          map['Title'] ?? map['title'] ?? '',
-      message:        map['Message'] ?? map['message'] ?? '',
-      isRead:         (map['IsRead'] ?? map['isRead'] ?? false) == true ||
+      targetRole: map['TargetRole'] ?? map['targetRole'],
+      title: map['Title'] ?? map['title'] ?? '',
+      message: map['Message'] ?? map['message'] ?? '',
+      isRead:
+          (map['IsRead'] ?? map['isRead'] ?? false) == true ||
           (map['IsRead'] ?? map['isRead']) == 1,
-      createdAt:      map['CreatedAt'] != null
+      createdAt: map['CreatedAt'] != null
           ? DateTime.tryParse(map['CreatedAt'].toString())
           : map['createdAt'] != null
           ? DateTime.tryParse(map['createdAt'].toString())

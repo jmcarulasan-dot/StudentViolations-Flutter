@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/fcm_service.dart';
 
-const _red  = Color(0xFFFD070C);
+const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
 
 class LoginScreen extends StatefulWidget {
@@ -31,10 +31,10 @@ class _LoginScreenState extends State<LoginScreen>
       duration: const Duration(milliseconds: 900),
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
+        );
     _animController.forward();
   }
 
@@ -66,19 +66,23 @@ class _LoginScreenState extends State<LoginScreen>
 
           // ── Decorative circles ────────────────────────────────────────────
           Positioned(
-            top: -60, right: -60,
+            top: -60,
+            right: -60,
             child: _decorCircle(220, _red.withOpacity(0.12)),
           ),
           Positioned(
-            top: 80, right: 30,
+            top: 80,
+            right: 30,
             child: _decorCircle(80, _red.withOpacity(0.08)),
           ),
           Positioned(
-            bottom: -80, left: -80,
+            bottom: -80,
+            left: -80,
             child: _decorCircle(280, _red.withOpacity(0.10)),
           ),
           Positioned(
-            bottom: 120, left: 20,
+            bottom: 120,
+            left: 20,
             child: _decorCircle(60, Colors.white.withOpacity(0.04)),
           ),
 
@@ -86,7 +90,10 @@ class _LoginScreenState extends State<LoginScreen>
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
+                ),
                 child: FadeTransition(
                   opacity: _fadeAnim,
                   child: SlideTransition(
@@ -119,7 +126,10 @@ class _LoginScreenState extends State<LoginScreen>
                                 children: [
                                   const Text(
                                     'Sign in to continue',
-                                    style: TextStyle(fontSize: 13, color: Colors.black45),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.black45,
+                                    ),
                                   ),
                                   const SizedBox(height: 20),
 
@@ -149,7 +159,9 @@ class _LoginScreenState extends State<LoginScreen>
                                         size: 20,
                                       ),
                                       onPressed: () => setState(
-                                          () => _obscurePassword = !_obscurePassword),
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
                                     ),
                                     validator: (v) => (v == null || v.isEmpty)
                                         ? 'Please enter your password'
@@ -167,27 +179,33 @@ class _LoginScreenState extends State<LoginScreen>
                                     children: [
                                       const Text(
                                         "Don't have an account?",
-                                        style: TextStyle(fontSize: 13, color: Colors.black54),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.black54,
+                                        ),
                                       ),
                                       TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pushNamed('/register'),
+                                        onPressed: () => Navigator.of(
+                                          context,
+                                        ).pushNamed('/register'),
                                         style: TextButton.styleFrom(
                                           foregroundColor: _navy,
-                                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                          ),
                                         ),
                                         child: const Text(
                                           'Register',
                                           style: TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 13,
-                                            decoration: TextDecoration.underline,
+                                            decoration:
+                                                TextDecoration.underline,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
-
                                 ],
                               ),
                             ),
@@ -209,7 +227,6 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildHeader() {
     return Column(
       children: [
-        
         Container(
           width: 100,
           height: 100,
@@ -227,10 +244,7 @@ class _LoginScreenState extends State<LoginScreen>
           child: ClipOval(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Image.asset(
-                'assets/images/ACLC.png',
-                fit: BoxFit.contain,
-              ),
+              child: Image.asset('assets/images/ACLC.png', fit: BoxFit.contain),
             ),
           ),
         ),
@@ -302,7 +316,10 @@ class _LoginScreenState extends State<LoginScreen>
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: _red, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       validator: validator,
     );
@@ -326,7 +343,9 @@ class _LoginScreenState extends State<LoginScreen>
               foregroundColor: Colors.white,
               elevation: 4,
               shadowColor: _navy.withOpacity(0.4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text(
               'LOGIN',
@@ -370,7 +389,9 @@ class _LoginScreenState extends State<LoginScreen>
               content: Text(authProvider.error ?? 'Login failed'),
               backgroundColor: _red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );

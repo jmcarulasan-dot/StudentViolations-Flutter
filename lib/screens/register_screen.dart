@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../models/user.dart';
 
-const _red   = Color(0xFFFD070C);
-const _navy  = Color(0xFF0F136E);
+const _red = Color(0xFFFD070C);
+const _navy = Color(0xFF0F136E);
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -14,22 +14,22 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _formKey                   = GlobalKey<FormState>();
-  final _nameController            = TextEditingController();
-  final _usernameController        = TextEditingController();
-  final _emailController           = TextEditingController();
-  final _passwordController        = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _contactController         = TextEditingController();
-  final _studentNoController       = TextEditingController();
-  final _addressController         = TextEditingController();
+  final _contactController = TextEditingController();
+  final _studentNoController = TextEditingController();
+  final _addressController = TextEditingController();
 
   UserRole? _selectedRole;
-  String?   _selectedYear;
-  String?   _selectedCourse;
-  String?   _selectedGender;
+  String? _selectedYear;
+  String? _selectedCourse;
+  String? _selectedGender;
   DateTime? _selectedDateOfBirth;
-  bool _obscurePassword        = true;
+  bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   final List<Map<String, String>> _yearLevels = [
@@ -72,9 +72,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       firstDate: DateTime(1950),
       lastDate: DateTime(now.year - 15, now.month, now.day),
       builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(primary: _navy),
-        ),
+        data: Theme.of(
+          ctx,
+        ).copyWith(colorScheme: const ColorScheme.light(primary: _navy)),
         child: child!,
       ),
     );
@@ -106,7 +106,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 children: [
                   // Header
                   Container(
-                    width: 90, height: 90,
+                    width: 90,
+                    height: 90,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -121,21 +122,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: ClipOval(
                       child: Padding(
                         padding: const EdgeInsets.all(8.0),
-                        child: Image.asset('assets/images/ACLC.png',
-                            fit: BoxFit.contain),
+                        child: Image.asset(
+                          'assets/images/ACLC.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'ACLC College of Mandaue',
-                    style: TextStyle(fontSize: 20,
-                        fontWeight: FontWeight.w800, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: _red.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -143,8 +151,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: const Text(
                       'Create Account',
-                      style: TextStyle(fontSize: 12,
-                          color: Colors.white70, letterSpacing: 1.2),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -169,27 +180,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
                             // Role
                             _sectionLabel('Select Role'),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<UserRole>(
                               value: _selectedRole,
                               decoration: _dropdownDecoration(
-                                  'Role', Icons.badge_rounded),
+                                'Role',
+                                Icons.badge_rounded,
+                              ),
                               hint: const Text('Select your role'),
                               items: UserRole.values.map((role) {
                                 return DropdownMenuItem(
                                   value: role,
-                                  child: Row(children: [
-                                    Icon(_getRoleIcon(role),
-                                        size: 18, color: _navy),
-                                    const SizedBox(width: 10),
-                                    Text(_getRoleDisplayName(role),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _getRoleIcon(role),
+                                        size: 18,
+                                        color: _navy,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        _getRoleDisplayName(role),
                                         style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600)),
-                                  ]),
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 );
                               }).toList(),
                               onChanged: (value) =>
@@ -225,8 +245,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               validator: (v) {
                                 if (v == null || v.isEmpty)
                                   return 'Please enter your email';
-                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(v))
+                                if (!RegExp(
+                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(v))
                                   return 'Please enter a valid email address';
                                 return null;
                               },
@@ -239,18 +260,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               dropdownColor: Colors.white,
                               iconEnabledColor: _navy,
                               style: const TextStyle(
-                                  color: Colors.black87, fontSize: 14),
+                                color: Colors.black87,
+                                fontSize: 14,
+                              ),
                               decoration: _dropdownDecoration(
-                                  'Gender', Icons.person_rounded),
+                                'Gender',
+                                Icons.person_rounded,
+                              ),
                               hint: const Text('Select gender'),
-                              items: _genders.map((g) => DropdownMenuItem(
-                                value: g['value'],
-                                child: Text(g['label']!),
-                              )).toList(),
+                              items: _genders
+                                  .map(
+                                    (g) => DropdownMenuItem(
+                                      value: g['value'],
+                                      child: Text(g['label']!),
+                                    ),
+                                  )
+                                  .toList(),
                               onChanged: (value) =>
                                   setState(() => _selectedGender = value),
-                              validator: (v) =>
-                                  v == null ? 'Please select your gender' : null,
+                              validator: (v) => v == null
+                                  ? 'Please select your gender'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
 
@@ -260,37 +290,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               child: AbsorbPointer(
                                 child: TextFormField(
                                   readOnly: true,
-                                  style: const TextStyle(fontSize: 14,
-                                      color: Colors.black87),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
                                   decoration: InputDecoration(
                                     labelText: 'Date of Birth',
                                     labelStyle: const TextStyle(
-                                        fontSize: 14, color: Colors.black45),
+                                      fontSize: 14,
+                                      color: Colors.black45,
+                                    ),
                                     prefixIcon: const Icon(
-                                        Icons.calendar_today_rounded,
-                                        color: _navy, size: 20),
+                                      Icons.calendar_today_rounded,
+                                      color: _navy,
+                                      size: 20,
+                                    ),
                                     hintText: 'Select your date of birth',
                                     filled: true,
                                     fillColor: const Color(0xFFF7F8FC),
                                     border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Color(0xFFDDE1EE))),
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFDDE1EE),
+                                      ),
+                                    ),
                                     enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: Color(0xFFDDE1EE))),
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFDDE1EE),
+                                      ),
+                                    ),
                                     focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: _navy, width: 1.8)),
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: _navy,
+                                        width: 1.8,
+                                      ),
+                                    ),
                                     errorBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                            color: _red, width: 1.5)),
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 14),
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                        color: _red,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
                                   ),
                                   controller: TextEditingController(
                                     text: _selectedDateOfBirth != null
@@ -367,10 +414,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _obscurePassword
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
-                                  color: Colors.black38, size: 20,
+                                  color: Colors.black38,
+                                  size: 20,
                                 ),
                                 onPressed: () => setState(
-                                    () => _obscurePassword = !_obscurePassword),
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
                               ),
                               validator: (v) {
                                 if (v == null || v.isEmpty)
@@ -392,11 +441,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _obscureConfirmPassword
                                       ? Icons.visibility_off_outlined
                                       : Icons.visibility_outlined,
-                                  color: Colors.black38, size: 20,
+                                  color: Colors.black38,
+                                  size: 20,
                                 ),
-                                onPressed: () => setState(() =>
-                                    _obscureConfirmPassword =
-                                        !_obscureConfirmPassword),
+                                onPressed: () => setState(
+                                  () => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword,
+                                ),
                               ),
                               validator: (v) {
                                 if (v == null || v.isEmpty)
@@ -431,18 +482,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 dropdownColor: Colors.white,
                                 iconEnabledColor: _navy,
                                 style: const TextStyle(
-                                    color: Colors.black87, fontSize: 14),
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                ),
                                 decoration: _dropdownDecoration(
-                                    'Course', Icons.menu_book_rounded),
+                                  'Course',
+                                  Icons.menu_book_rounded,
+                                ),
                                 hint: const Text('Select course'),
-                                items: _courses.map((c) => DropdownMenuItem(
-                                  value: c['value'],
-                                  child: Text(c['label']!),
-                                )).toList(),
+                                items: _courses
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c['value'],
+                                        child: Text(c['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                                 onChanged: (value) =>
                                     setState(() => _selectedCourse = value),
-                                validator: (v) =>
-                                    v == null ? 'Please select your course' : null,
+                                validator: (v) => v == null
+                                    ? 'Please select your course'
+                                    : null,
                               ),
                               const SizedBox(height: 16),
 
@@ -451,19 +511,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 dropdownColor: Colors.white,
                                 iconEnabledColor: _navy,
                                 style: const TextStyle(
-                                    color: Colors.black87, fontSize: 14),
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                ),
                                 decoration: _dropdownDecoration(
-                                    'Year Level',
-                                    Icons.calendar_today_rounded),
+                                  'Year Level',
+                                  Icons.calendar_today_rounded,
+                                ),
                                 hint: const Text('Select year level'),
-                                items: _yearLevels.map((y) => DropdownMenuItem(
-                                  value: y['value'],
-                                  child: Text(y['label']!),
-                                )).toList(),
+                                items: _yearLevels
+                                    .map(
+                                      (y) => DropdownMenuItem(
+                                        value: y['value'],
+                                        child: Text(y['label']!),
+                                      ),
+                                    )
+                                    .toList(),
                                 onChanged: (value) =>
                                     setState(() => _selectedYear = value),
-                                validator: (v) =>
-                                    v == null ? 'Please select your year level' : null,
+                                validator: (v) => v == null
+                                    ? 'Please select your year level'
+                                    : null,
                               ),
                             ],
 
@@ -475,7 +543,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 if (authProvider.isLoading) {
                                   return const Center(
                                     child: CircularProgressIndicator(
-                                        color: _navy),
+                                      color: _navy,
+                                    ),
                                   );
                                 }
                                 return SizedBox(
@@ -493,8 +562,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       elevation: 4,
                                       shadowColor: _navy.withOpacity(0.4),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
                                     child: const Text(
@@ -514,17 +582,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text('Already have an account?',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.black54)),
+                                const Text(
+                                  'Already have an account?',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.black54,
+                                  ),
+                                ),
                                 TextButton(
-                                  onPressed: () => Navigator.of(context)
-                                      .pushReplacementNamed('/login'),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                  ).pushReplacementNamed('/login'),
                                   style: TextButton.styleFrom(
                                     foregroundColor: _navy,
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 6),
+                                      horizontal: 6,
+                                    ),
                                   ),
                                   child: const Text(
                                     'Login',
@@ -561,7 +634,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             backgroundColor: _red,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+              borderRadius: BorderRadius.circular(10),
+            ),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -571,20 +645,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
       await authProvider.register(
-        username:      _usernameController.text.trim(),
-        password:      _passwordController.text,
-        name:          _nameController.text.trim(),
-        role:          _selectedRole!,
-        email:         _emailController.text.trim(),
-        address:       _addressController.text.trim(),
-        gender:        _selectedGender!,
-        dateOfBirth:   _formatDate(_selectedDateOfBirth!),
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+        role: _selectedRole!,
+        email: _emailController.text.trim(),
+        address: _addressController.text.trim(),
+        gender: _selectedGender!,
+        dateOfBirth: _formatDate(_selectedDateOfBirth!),
         contactNumber: _contactController.text.trim(),
         studentNo: _selectedRole == UserRole.student
             ? _studentNoController.text.trim()
             : null,
         course: _selectedRole == UserRole.student ? _selectedCourse : null,
-        year:   _selectedRole == UserRole.student ? _selectedYear : null,
+        year: _selectedRole == UserRole.student ? _selectedYear : null,
       );
 
       if (authProvider.currentUser != null) {
@@ -603,26 +677,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _studentNoController.clear();
           _addressController.clear();
           setState(() {
-            _selectedRole        = null;
-            _selectedYear        = null;
-            _selectedCourse      = null;
-            _selectedGender      = null;
+            _selectedRole = null;
+            _selectedYear = null;
+            _selectedCourse = null;
+            _selectedGender = null;
             _selectedDateOfBirth = null;
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('Registration successful! Please log in.',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ]),
+              content: const Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Registration successful! Please log in.',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 3),
             ),
@@ -634,12 +716,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(authProvider.error ??
-                  'Registration failed. Please try again.'),
+              content: Text(
+                authProvider.error ?? 'Registration failed. Please try again.',
+              ),
               backgroundColor: _red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               margin: const EdgeInsets.all(16),
             ),
           );
@@ -649,12 +733,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _sectionLabel(String text) {
-    return Text(text,
-        style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _navy,
-            letterSpacing: 0.3));
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: _navy,
+        letterSpacing: 0.3,
+      ),
+    );
   }
 
   InputDecoration _dropdownDecoration(String label, IconData icon) {
@@ -664,22 +751,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       filled: true,
       fillColor: const Color(0xFFF7F8FC),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
+      ),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
+      ),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _navy, width: 1.8)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _navy, width: 1.8),
+      ),
       errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _red, width: 1.5)),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _red, width: 1.5),
+      ),
       focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _navy, width: 1.8)),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: _navy, width: 1.8),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
@@ -707,19 +798,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
         filled: true,
         fillColor: const Color(0xFFF7F8FC),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
+        ),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFDDE1EE))),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
+        ),
         focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _navy, width: 1.8)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _navy, width: 1.8),
+        ),
         errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: _red, width: 1.5)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _red, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
       ),
       validator: validator,
     );
@@ -727,19 +824,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String _getRoleDisplayName(UserRole role) {
     switch (role) {
-      case UserRole.guard:    return 'Guard';
-      case UserRole.student:  return 'Student';
-      case UserRole.sao:      return 'SAO';
-      case UserRole.guidance: return 'Guidance';
+      case UserRole.guard:
+        return 'Guard';
+      case UserRole.student:
+        return 'Student';
+      case UserRole.sao:
+        return 'SAO';
+      case UserRole.guidance:
+        return 'Guidance';
     }
   }
 
   IconData _getRoleIcon(UserRole role) {
     switch (role) {
-      case UserRole.guard:    return Icons.security_rounded;
-      case UserRole.student:  return Icons.school_rounded;
-      case UserRole.sao:      return Icons.admin_panel_settings_rounded;
-      case UserRole.guidance: return Icons.psychology_rounded;
+      case UserRole.guard:
+        return Icons.security_rounded;
+      case UserRole.student:
+        return Icons.school_rounded;
+      case UserRole.sao:
+        return Icons.admin_panel_settings_rounded;
+      case UserRole.guidance:
+        return Icons.psychology_rounded;
     }
   }
 }

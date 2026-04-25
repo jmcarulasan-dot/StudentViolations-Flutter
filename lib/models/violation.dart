@@ -1,9 +1,4 @@
-enum ViolationType {
-  noId,
-  noUniform,
-  piercing,
-  coloredHair,
-}
+enum ViolationType { noId, noUniform, piercing, coloredHair }
 
 enum ViolationStatus {
   pending,
@@ -24,8 +19,11 @@ class Violation {
   final ViolationStatus status;
   final int offenseCount;
   final String? reportedBy;
-  final String? violationName; 
-  final String? severity;      
+  final String? violationName;
+  final String? severity;
+  final String? appealStatus;
+  final String? appealRemarks;
+
   Violation({
     required this.id,
     required this.studentId,
@@ -37,35 +35,37 @@ class Violation {
     this.reportedBy,
     this.violationName,
     this.severity,
+    this.appealStatus,
+    this.appealRemarks,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id':            id,
-      'studentId':     studentId,
-      'type':          type.name,
-      'date':          date.toIso8601String(),
-      'remarks':       remarks,
-      'status':        status.name,
-      'offenseCount':  offenseCount,
-      'reportedBy':    reportedBy,
+      'id': id,
+      'studentId': studentId,
+      'type': type.name,
+      'date': date.toIso8601String(),
+      'remarks': remarks,
+      'status': status.name,
+      'offenseCount': offenseCount,
+      'reportedBy': reportedBy,
       'violationName': violationName,
-      'severity':      severity,
+      'severity': severity,
     };
   }
 
   factory Violation.fromMap(Map<String, dynamic> map) {
     return Violation(
-      id:            map['id'],
-      studentId:     map['studentId'],
-      type:          ViolationType.values.firstWhere((t) => t.name == map['type']),
-      date:          DateTime.parse(map['date']),
-      remarks:       map['remarks'],
-      status:        ViolationStatus.values.firstWhere((s) => s.name == map['status']),
-      offenseCount:  map['offenseCount'],
-      reportedBy:    map['reportedBy'],
+      id: map['id'],
+      studentId: map['studentId'],
+      type: ViolationType.values.firstWhere((t) => t.name == map['type']),
+      date: DateTime.parse(map['date']),
+      remarks: map['remarks'],
+      status: ViolationStatus.values.firstWhere((s) => s.name == map['status']),
+      offenseCount: map['offenseCount'],
+      reportedBy: map['reportedBy'],
       violationName: map['violationName'],
-      severity:      map['severity'],
+      severity: map['severity'],
     );
   }
 
@@ -74,22 +74,33 @@ class Violation {
       return violationName!;
     }
     switch (type) {
-      case ViolationType.noId:        return 'No School ID';
-      case ViolationType.noUniform:   return 'No/Incomplete Uniform';
-      case ViolationType.piercing:    return 'Visible Piercing';
-      case ViolationType.coloredHair: return 'Colored/Dyed Hair';
+      case ViolationType.noId:
+        return 'No School ID';
+      case ViolationType.noUniform:
+        return 'No/Incomplete Uniform';
+      case ViolationType.piercing:
+        return 'Visible Piercing';
+      case ViolationType.coloredHair:
+        return 'Colored/Dyed Hair';
     }
   }
 
   String get statusDescription {
     switch (status) {
-      case ViolationStatus.pending:            return 'Pending';
-      case ViolationStatus.warning:            return 'Pending';
-      case ViolationStatus.parentNotified:     return 'Parent Notified';
-      case ViolationStatus.referredToSAO:      return 'Approved';
-      case ViolationStatus.referredToGuidance: return 'Referred to Guidance';
-      case ViolationStatus.disciplinaryAction: return 'Disciplinary Action';
-      case ViolationStatus.cleared:            return 'Rejected';
+      case ViolationStatus.pending:
+        return 'Pending';
+      case ViolationStatus.warning:
+        return 'Pending';
+      case ViolationStatus.parentNotified:
+        return 'Parent Notified';
+      case ViolationStatus.referredToSAO:
+        return 'Approved';
+      case ViolationStatus.referredToGuidance:
+        return 'Referred to Guidance';
+      case ViolationStatus.disciplinaryAction:
+        return 'Disciplinary Action';
+      case ViolationStatus.cleared:
+        return 'Rejected';
     }
   }
 }

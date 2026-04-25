@@ -7,7 +7,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.91.53.11:5277';
+  static const String _baseUrl = 'http://10.248.24.11:5277';
 
   static void initialize() {}
 
@@ -58,9 +58,7 @@ class DatabaseService {
         },
         body: jsonEncode({'FCMToken': fcmToken}),
       );
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   // ── AUTH ─────────────────────────────────────────────────────────────────────
@@ -83,19 +81,20 @@ class DatabaseService {
 
         final decodedToken = _decodeJwt(data['token']);
         final name = decodedToken['name']?.toString() ?? username;
-        final id = decodedToken[
-                'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
-            ?.toString() ?? '';
+        final id =
+            decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+                ?.toString() ??
+            '';
 
         final studentNo = decodedToken['studentNo']?.toString() ?? '';
 
         final roleStr = (data['role'] as String).toLowerCase();
         return User(
-          id:        id,
-          username:  username,
-          password:  '',
-          name:      name,
-          role:      _parseRole(roleStr),
+          id: id,
+          username: username,
+          password: '',
+          name: name,
+          role: _parseRole(roleStr),
           studentNo: studentNo,
         );
       }
@@ -111,9 +110,14 @@ class DatabaseService {
     String payload = parts[1];
     payload = payload.replaceAll('-', '+').replaceAll('_', '/');
     switch (payload.length % 4) {
-      case 0: break;
-      case 2: payload += '=='; break;
-      case 3: payload += '='; break;
+      case 0:
+        break;
+      case 2:
+        payload += '==';
+        break;
+      case 3:
+        payload += '=';
+        break;
     }
     final decoded = utf8.decode(base64.decode(payload));
     return jsonDecode(decoded);
@@ -143,7 +147,7 @@ class DatabaseService {
 
       final nameParts = name.trim().split(' ');
       final firstName = nameParts.first;
-      final lastName  = nameParts.length > 1
+      final lastName = nameParts.length > 1
           ? nameParts.skip(1).join(' ')
           : firstName;
 
@@ -151,19 +155,19 @@ class DatabaseService {
         Uri.parse('$_baseUrl/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'username':    username,
-          'password':    password,
-          'firstName':   firstName,
-          'lastName':    lastName,
-          'email':       email ?? '$username@aclc.com',
-          'gender':      (gender ?? 'male').toLowerCase(),
+          'username': username,
+          'password': password,
+          'firstName': firstName,
+          'lastName': lastName,
+          'email': email ?? '$username@aclc.com',
+          'gender': (gender ?? 'male').toLowerCase(),
           'dateOfBirth': dateOfBirth ?? '2000-01-01',
-          'address':     address ?? '',
-          'number':      contactNumber ?? '',
-          'role':        role.name,
-          'course':      course,
-          'year':        yearNum,
-          'studentNo':   studentNo,
+          'address': address ?? '',
+          'number': contactNumber ?? '',
+          'role': role.name,
+          'course': course,
+          'year': yearNum,
+          'studentNo': studentNo,
         }),
       );
 
@@ -173,13 +177,13 @@ class DatabaseService {
         return {
           'success': true,
           'user': User(
-            id:            '',
-            username:      username,
-            password:      '',
-            name:          name,
-            role:          role,
+            id: '',
+            username: username,
+            password: '',
+            name: name,
+            role: role,
             contactNumber: contactNumber,
-            studentNo:     studentNo,
+            studentNo: studentNo,
           ),
         };
       }
@@ -211,25 +215,31 @@ class DatabaseService {
         final d = data['data'];
         final List violationsList = d['violations'] ?? [];
         return {
-          'student_no':       d['student_no'] ?? '',
-          'name':             d['name'] ?? '',
+          'student_no': d['student_no'] ?? '',
+          'name': d['name'] ?? '',
           'total_violations': d['total_violations'] ?? 0,
-          'pending':          d['pending'] ?? 0,
-          'approved':         d['approved'] ?? 0,
-          'rejected':         d['rejected'] ?? 0,
-          'warning_level':    d['warning_level'] ?? 'green',
-          'violations': violationsList.map((v) => Violation(
-            id:            v['id'].toString(),
-            studentId:     d['student_no'] ?? '',
-            type:          _parseViolationType(v['type']),
-            date:          DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
-            remarks:       v['details'] ?? '',
-            status:        _parseStatus(v['status']),
-            offenseCount:  1,
-            reportedBy:    v['recorded_by'] ?? '',
-            violationName: v['type'] ?? '',
-            severity:      v['severity'] ?? '',
-          )).toList(),
+          'pending': d['pending'] ?? 0,
+          'approved': d['approved'] ?? 0,
+          'rejected': d['rejected'] ?? 0,
+          'warning_level': d['warning_level'] ?? 'green',
+          'violations': violationsList
+              .map(
+                (v) => Violation(
+                  id: v['id'].toString(),
+                  studentId: d['student_no'] ?? '',
+                  type: _parseViolationType(v['type']),
+                  date: DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
+                  remarks: v['details'] ?? '',
+                  status: _parseStatus(v['status']),
+                  offenseCount: 1,
+                  reportedBy: v['recorded_by'] ?? '',
+                  violationName: v['type'] ?? '',
+                  severity: v['severity'] ?? '',
+                  appealStatus: v['appeal_status'],
+                  appealRemarks: v['appeal_remarks'],
+                ),
+              )
+              .toList(),
         };
       }
       return {};
@@ -275,7 +285,10 @@ class DatabaseService {
   }
 
   // POST /api/student/violations/{id}/appeal
-  static Future<bool> submitAppeal(String violationId, String appealText) async {
+  static Future<bool> submitAppeal(
+    String violationId,
+    String appealText,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.post(
@@ -304,11 +317,11 @@ class DatabaseService {
       if (response.statusCode == 200 && data['status'] == 200) {
         final d = data['data'];
         return {
-          'student_no':      d['student_no'],
-          'name':            d['name'],
+          'student_no': d['student_no'],
+          'name': d['name'],
           'violation_count': d['violation_count'],
-          'warning_level':   d['warning_level'],
-          'violations':      d['violations'] ?? [],
+          'warning_level': d['warning_level'],
+          'violations': d['violations'] ?? [],
         };
       }
       return null;
@@ -325,20 +338,25 @@ class DatabaseService {
         Uri.parse('$_baseUrl/api/guard/student/violation'),
         headers: headers,
         body: jsonEncode({
-          'studentNo':     violation.studentId,
-          'violationType': violation.violationName ?? _violationTypeToString(violation.type),
-          'details':       violation.remarks ?? '',
-          'severity':      violation.severity ?? 'minor',
+          'studentNo': violation.studentId,
+          'violationType':
+              violation.violationName ?? _violationTypeToString(violation.type),
+          'details':
+              (violation.remarks != null &&
+                  violation.remarks!.trim().isNotEmpty)
+              ? violation.remarks!.trim()
+              : 'No additional details',
+          'severity': violation.severity ?? 'minor',
         }),
       );
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final d = data['data'];
         return {
-          'student_no':          d['student_no'],
-          'name':                d['name'],
+          'student_no': d['student_no'],
+          'name': d['name'],
           'new_violation_count': d['new_violation_count'],
-          'new_warning_level':   d['new_warning_level'],
+          'new_warning_level': d['new_warning_level'],
         };
       }
       throw Exception(data['message'] ?? 'Failed to record violation');
@@ -349,12 +367,15 @@ class DatabaseService {
 
   // GET /api/guard/violations/summary?StartDate=xxx&EndDate=xxx
   static Future<Map<String, dynamic>> getViolationSummary(
-      String startDate, String endDate) async {
+    String startDate,
+    String endDate,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
         Uri.parse(
-            '$_baseUrl/api/guard/violations/summary?StartDate=$startDate&EndDate=$endDate'),
+          '$_baseUrl/api/guard/violations/summary?StartDate=$startDate&EndDate=$endDate',
+        ),
         headers: headers,
       );
       final data = jsonDecode(response.body);
@@ -362,9 +383,9 @@ class DatabaseService {
         final d = data['data'];
         return {
           'totalViolations': d['totalViolations'] ?? 0,
-          'topViolation':    d['topViolation'] ?? 'N/A',
-          'startDate':       d['startDate'] ?? startDate,
-          'endDate':         d['endDate'] ?? endDate,
+          'topViolation': d['topViolation'] ?? 'N/A',
+          'startDate': d['startDate'] ?? startDate,
+          'endDate': d['endDate'] ?? endDate,
         };
       }
       return {'totalViolations': 0, 'topViolation': 'N/A'};
@@ -384,15 +405,19 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final List students = data['data'];
-        return students.map((s) => User(
-          id:           s['student_no'] ?? '',
-          username:     s['student_no'] ?? '',
-          password:     '',
-          name:         s['name'] ?? '',
-          role:         UserRole.student,
-          gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
-          studentNo:    s['student_no'] ?? '',
-        )).toList();
+        return students
+            .map(
+              (s) => User(
+                id: s['student_no'] ?? '',
+                username: s['student_no'] ?? '',
+                password: '',
+                name: s['name'] ?? '',
+                role: UserRole.student,
+                gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
+                studentNo: s['student_no'] ?? '',
+              ),
+            )
+            .toList();
       }
       return [];
     } catch (e) {
@@ -416,7 +441,9 @@ class DatabaseService {
   }
 
   // GET violations for a specific student (reuses validate endpoint)
-  static Future<List<Violation>> getViolationsByStudent(String studentNo) async {
+  static Future<List<Violation>> getViolationsByStudent(
+    String studentNo,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
@@ -426,18 +453,22 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final List violations = data['data']['violations'] ?? [];
-        return violations.map((v) => Violation(
-          id:            v['id']?.toString() ?? '',
-          studentId:     studentNo,
-          type:          _parseViolationType(v['type']),
-          date:          DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
-          remarks:       v['details'] ?? '',
-          status:        _parseStatus(v['status']),
-          offenseCount:  1,
-          reportedBy:    v['recorded_by'] ?? '',
-          violationName: v['type'] ?? '',
-          severity:      v['severity'] ?? '',
-        )).toList();
+        return violations
+            .map(
+              (v) => Violation(
+                id: v['id']?.toString() ?? '',
+                studentId: studentNo,
+                type: _parseViolationType(v['type']),
+                date: DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
+                remarks: v['details'] ?? '',
+                status: _parseStatus(v['status']),
+                offenseCount: 1,
+                reportedBy: v['recorded_by'] ?? '',
+                violationName: v['type'] ?? '',
+                severity: v['severity'] ?? '',
+              ),
+            )
+            .toList();
       }
       return [];
     } catch (e) {
@@ -458,15 +489,19 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final List students = data['data'];
-        return students.map((s) => User(
-          id:           s['student_no'] ?? '',
-          username:     s['student_no'] ?? '',
-          password:     '',
-          name:         s['name'] ?? '',
-          role:         UserRole.student,
-          gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
-          studentNo:    s['student_no'] ?? '',
-        )).toList();
+        return students
+            .map(
+              (s) => User(
+                id: s['student_no'] ?? '',
+                username: s['student_no'] ?? '',
+                password: '',
+                name: s['name'] ?? '',
+                role: UserRole.student,
+                gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
+                studentNo: s['student_no'] ?? '',
+              ),
+            )
+            .toList();
       }
       return [];
     } catch (e) {
@@ -476,7 +511,8 @@ class DatabaseService {
 
   // GET /api/guidance/students/{studentNo}/report
   static Future<Map<String, dynamic>?> getGuidanceStudentReport(
-      String studentNo) async {
+    String studentNo,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
@@ -542,8 +578,8 @@ class DatabaseService {
   }
 
   // GET /api/guidance/violations/by-severity
-  static Future<List<Map<String, dynamic>>> getGuidanceViolationsBySeverity()
-      async {
+  static Future<List<Map<String, dynamic>>>
+  getGuidanceViolationsBySeverity() async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
@@ -582,7 +618,8 @@ class DatabaseService {
       final headers = await _authHeaders();
       final response = await http.put(
         Uri.parse(
-            '$_baseUrl/api/guidance/students/$studentNo/recommend-dismiss'),
+          '$_baseUrl/api/guidance/students/$studentNo/recommend-dismiss',
+        ),
         headers: headers,
       );
       final data = jsonDecode(response.body);
@@ -595,15 +632,19 @@ class DatabaseService {
   // FIX: GuidanceController uses [HttpPut] — changed from http.post to http.put
   // PUT /api/guidance/violations/{id}/appeal/review
   static Future<bool> guidanceReviewAppeal(
-      String violationId, String appealStatus, String appealRemarks) async {
+    String violationId,
+    String appealStatus,
+    String appealRemarks,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.put(
         Uri.parse(
-            '$_baseUrl/api/guidance/violations/$violationId/appeal/review'),
+          '$_baseUrl/api/guidance/violations/$violationId/appeal/review',
+        ),
         headers: headers,
         body: jsonEncode({
-          'AppealStatus':  appealStatus,
+          'AppealStatus': appealStatus,
           'AppealRemarks': appealRemarks,
         }),
       );
@@ -723,15 +764,17 @@ class DatabaseService {
 
   // PUT /api/sao/violations/{id}/appeal/review
   static Future<bool> saoReviewAppeal(
-      String violationId, String appealStatus, String appealRemarks) async {
+    String violationId,
+    String appealStatus,
+    String appealRemarks,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.put(
-        Uri.parse(
-            '$_baseUrl/api/sao/violations/$violationId/appeal/review'),
+        Uri.parse('$_baseUrl/api/sao/violations/$violationId/appeal/review'),
         headers: headers,
         body: jsonEncode({
-          'AppealStatus':  appealStatus,
+          'AppealStatus': appealStatus,
           'AppealRemarks': appealRemarks,
         }),
       );
@@ -742,9 +785,46 @@ class DatabaseService {
     }
   }
 
+  // GET /api/guidance/violations/appeals
+  static Future<List<Map<String, dynamic>>> getGuidanceAppeals() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/guidance/violations/appeals'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 200) {
+        return List<Map<String, dynamic>>.from(data['data']);
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Failed to get guidance appeals: $e');
+    }
+  }
+
+  // GET /api/sao/violations/appeals
+  static Future<List<Map<String, dynamic>>> getSaoAppeals() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/sao/violations/appeals'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 200) {
+        return List<Map<String, dynamic>>.from(data['data']);
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Failed to get appeals: $e');
+    }
+  }
+
   // GET /api/sao/students/{studentNo}/report
   static Future<Map<String, dynamic>?> getStudentReport(
-      String studentNo) async {
+    String studentNo,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
@@ -802,16 +882,20 @@ class DatabaseService {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == 200) {
         final List users = data['data'];
-        return users.map((u) => User(
-          id:            u['id'].toString(),
-          username:      u['username'],
-          password:      '',
-          name:          u['name'],
-          role:          _parseRole((u['role'] as String).toLowerCase()),
-          contactNumber: u['contact_number'],
-          gradeSection:  '${u['course'] ?? ''} - ${u['year'] ?? ''}',
-          studentNo:     u['student_no'] ?? '',
-        )).toList();
+        return users
+            .map(
+              (u) => User(
+                id: u['id'].toString(),
+                username: u['username'],
+                password: '',
+                name: u['name'],
+                role: _parseRole((u['role'] as String).toLowerCase()),
+                contactNumber: u['contact_number'],
+                gradeSection: '${u['course'] ?? ''} - ${u['year'] ?? ''}',
+                studentNo: u['student_no'] ?? '',
+              ),
+            )
+            .toList();
       }
       return [];
     } catch (e) {
@@ -839,7 +923,9 @@ class DatabaseService {
 
   // PUT /api/sao/users/{id}
   static Future<void> updateUser(
-      String userId, Map<String, dynamic> userData) async {
+    String userId,
+    Map<String, dynamic> userData,
+  ) async {
     try {
       final headers = await _authHeaders();
       final response = await http.put(
@@ -919,53 +1005,72 @@ class DatabaseService {
   // ── HELPERS ──────────────────────────────────────────────────────────────────
 
   static List<Violation> _mapViolations(List violations) {
-    return violations.map((v) => Violation(
-      id:            v['id'].toString(),
-      studentId:     v['student_no'] ?? '',
-      type:          _parseViolationType(v['type']),
-      date:          DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
-      remarks:       v['details'] ?? '',
-      status:        _parseStatus(v['status']),
-      offenseCount:  1,
-      reportedBy:    v['recorded_by'] ?? '',
-      violationName: v['type'] ?? '',
-      severity:      v['severity'] ?? '',
-    )).toList();
+    return violations
+        .map(
+          (v) => Violation(
+            id: v['id'].toString(),
+            studentId: v['student_no'] ?? '',
+            type: _parseViolationType(v['type']),
+            date: DateTime.tryParse(v['date'] ?? '') ?? DateTime.now(),
+            remarks: v['details'] ?? '',
+            status: _parseStatus(v['status']),
+            offenseCount: 1,
+            reportedBy: v['recorded_by'] ?? '',
+            violationName: v['type'] ?? '',
+            severity: v['severity'] ?? '',
+          ),
+        )
+        .toList();
   }
 
   static UserRole _parseRole(String roleStr) {
     switch (roleStr) {
-      case 'guard':    return UserRole.guard;
-      case 'student':  return UserRole.student;
-      case 'sao':      return UserRole.sao;
-      case 'guidance': return UserRole.guidance;
-      default:         return UserRole.student;
+      case 'guard':
+        return UserRole.guard;
+      case 'student':
+        return UserRole.student;
+      case 'sao':
+        return UserRole.sao;
+      case 'guidance':
+        return UserRole.guidance;
+      default:
+        return UserRole.student;
     }
   }
 
   static ViolationType _parseViolationType(String? type) {
     final t = (type ?? '').toLowerCase();
-    if (t.contains('uniform'))                            return ViolationType.noUniform;
-    if (t.contains('piercing') || t.contains('earring')) return ViolationType.piercing;
-    if (t.contains('hair') || t.contains('color'))       return ViolationType.coloredHair;
+    if (t.contains('uniform')) return ViolationType.noUniform;
+    if (t.contains('piercing') || t.contains('earring'))
+      return ViolationType.piercing;
+    if (t.contains('hair') || t.contains('color'))
+      return ViolationType.coloredHair;
     return ViolationType.noId;
   }
 
   static String _violationTypeToString(ViolationType type) {
     switch (type) {
-      case ViolationType.noId:        return 'No ID';
-      case ViolationType.noUniform:   return 'No Uniform';
-      case ViolationType.piercing:    return 'Piercing';
-      case ViolationType.coloredHair: return 'Colored Hair';
+      case ViolationType.noId:
+        return 'No ID';
+      case ViolationType.noUniform:
+        return 'No Uniform';
+      case ViolationType.piercing:
+        return 'Piercing';
+      case ViolationType.coloredHair:
+        return 'Colored Hair';
     }
   }
 
   static ViolationStatus _parseStatus(String? status) {
     switch ((status ?? '').toLowerCase()) {
-      case 'approved': return ViolationStatus.referredToSAO;
-      case 'rejected': return ViolationStatus.cleared;
-      case 'pending':  return ViolationStatus.warning;
-      default:         return ViolationStatus.warning;
+      case 'approved':
+        return ViolationStatus.referredToSAO;
+      case 'rejected':
+        return ViolationStatus.cleared;
+      case 'pending':
+        return ViolationStatus.warning;
+      default:
+        return ViolationStatus.warning;
     }
   }
 
@@ -976,7 +1081,9 @@ class DatabaseService {
   }
 
   static Future<void> updateViolationStatus(
-      String violationId, ViolationStatus status) async {
+    String violationId,
+    ViolationStatus status,
+  ) async {
     if (status == ViolationStatus.referredToSAO) {
       await approveViolation(violationId);
     } else if (status == ViolationStatus.cleared) {

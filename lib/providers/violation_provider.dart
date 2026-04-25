@@ -14,10 +14,10 @@ class ViolationProvider with ChangeNotifier {
 
   // Student-specific data
   String _warningLevel = 'green';
-  int _pendingCount  = 0;
+  int _pendingCount = 0;
   int _approvedCount = 0;
   int _rejectedCount = 0;
-  int _totalCount    = 0;
+  int _totalCount = 0;
   String? _studentQrCode;
   Map<String, dynamic> _studentProfile = {};
   Map<String, dynamic> _validatedStudent = {};
@@ -26,23 +26,23 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> _studentReport = {};
 
   // Getters
-  List<Violation> get violations   => _violations;
-  List<User> get students          => _students;
-  List<User> get users             => _users;
+  List<Violation> get violations => _violations;
+  List<User> get students => _students;
+  List<User> get users => _users;
   List<NotificationModel> get notifications => _notifications;
-  bool get isLoading               => _isLoading;
-  String? get error                => _error;
-  String get warningLevel          => _warningLevel;
-  int get pendingCount             => _pendingCount;
-  int get approvedCount            => _approvedCount;
-  int get rejectedCount            => _rejectedCount;
-  int get totalCount               => _totalCount;
-  String? get studentQrCode        => _studentQrCode;
-  Map<String, dynamic> get studentProfile   => _studentProfile;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  String get warningLevel => _warningLevel;
+  int get pendingCount => _pendingCount;
+  int get approvedCount => _approvedCount;
+  int get rejectedCount => _rejectedCount;
+  int get totalCount => _totalCount;
+  String? get studentQrCode => _studentQrCode;
+  Map<String, dynamic> get studentProfile => _studentProfile;
   Map<String, dynamic> get validatedStudent => _validatedStudent;
   Map<String, dynamic> get violationSummary => _violationSummary;
-  Map<String, dynamic> get saoSummary       => _saoSummary;
-  Map<String, dynamic> get studentReport    => _studentReport;
+  Map<String, dynamic> get saoSummary => _saoSummary;
+  Map<String, dynamic> get studentReport => _studentReport;
 
   //STUDENTS METHOD
   // GET /api/student/violations
@@ -52,12 +52,12 @@ class ViolationProvider with ChangeNotifier {
     try {
       final result = await DatabaseService.getMyViolations();
       if (result.isNotEmpty) {
-        _violations    = List<Violation>.from(result['violations'] ?? []);
-        _pendingCount  = result['pending']  ?? 0;
+        _violations = List<Violation>.from(result['violations'] ?? []);
+        _pendingCount = result['pending'] ?? 0;
         _approvedCount = result['approved'] ?? 0;
         _rejectedCount = result['rejected'] ?? 0;
-        _totalCount    = result['total_violations'] ?? 0;
-        _warningLevel  = result['warning_level'] ?? 'green';
+        _totalCount = result['total_violations'] ?? 0;
+        _warningLevel = result['warning_level'] ?? 'green';
       }
       notifyListeners();
     } catch (e) {
@@ -155,39 +155,39 @@ class ViolationProvider with ChangeNotifier {
 
   // POST /api/guard/student/violation
   // Record a new violation
- Future<void> recordViolation({
-  required String studentId,
-  required ViolationType type,
-  required String reportedBy,
-  String? remarks,
-  String? severity,
-  String? violationName,  
-}) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    final violation = Violation(
-      id:            DateTime.now().millisecondsSinceEpoch.toString(),
-      studentId:     studentId,
-      type:          type,
-      date:          DateTime.now(),
-      remarks:       remarks,
-      status:        ViolationStatus.warning,
-      offenseCount:  1,
-      reportedBy:    reportedBy,
-      violationName: violationName ?? _violationTypeToString(type),  
-      severity:      severity ?? 'minor',
-    );
-    await DatabaseService.addViolation(violation);
-    await loadStudents();
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to record violation: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  Future<void> recordViolation({
+    required String studentId,
+    required ViolationType type,
+    required String reportedBy,
+    String? remarks,
+    String? severity,
+    String? violationName,
+  }) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final violation = Violation(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        studentId: studentId,
+        type: type,
+        date: DateTime.now(),
+        remarks: remarks,
+        status: ViolationStatus.warning,
+        offenseCount: 1,
+        reportedBy: reportedBy,
+        violationName: violationName ?? _violationTypeToString(type),
+        severity: severity ?? 'minor',
+      );
+      await DatabaseService.addViolation(violation);
+      await loadStudents();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to record violation: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
   // GET /api/guard/violations/student?studentNo=xxx
   // View all violations of a specific student
@@ -211,7 +211,10 @@ class ViolationProvider with ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      _violationSummary = await DatabaseService.getViolationSummary(startDate, endDate);
+      _violationSummary = await DatabaseService.getViolationSummary(
+        startDate,
+        endDate,
+      );
       notifyListeners();
     } catch (e) {
       _error = 'Failed to load summary: ${e.toString()}';
@@ -308,7 +311,9 @@ class ViolationProvider with ChangeNotifier {
   }
 
   // GET /api/guidance/students/{studentNo}/report
-  Future<Map<String, dynamic>?> getGuidanceStudentReport(String studentNo) async {
+  Future<Map<String, dynamic>?> getGuidanceStudentReport(
+    String studentNo,
+  ) async {
     _setLoading(true);
     _error = null;
     try {
@@ -518,8 +523,10 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-
-  Future<void> updateViolationStatus(String violationId, ViolationStatus status) async {
+  Future<void> updateViolationStatus(
+    String violationId,
+    ViolationStatus status,
+  ) async {
     if (status == ViolationStatus.referredToSAO) {
       await approveViolation(violationId);
     } else if (status == ViolationStatus.cleared) {
@@ -530,126 +537,161 @@ class ViolationProvider with ChangeNotifier {
   }
 
   // PUT /api/guidance/students/{studentNo}/warn
-Future<void> warnStudent(String studentNo) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.warnStudent(studentNo);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to warn student: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  Future<void> warnStudent(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.warnStudent(studentNo);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to warn student: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-// PUT /api/guidance/students/{studentNo}/recommend-dismiss
-Future<void> recommendDismiss(String studentNo) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.recommendDismiss(studentNo);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to recommend dismissal: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  // PUT /api/guidance/students/{studentNo}/recommend-dismiss
+  Future<void> recommendDismiss(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.recommendDismiss(studentNo);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to recommend dismissal: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-// POST /api/guidance/violations/{id}/appeal/review
-Future<void> guidanceReviewAppeal(
-    String violationId, String appealStatus, String appealRemarks) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.guidanceReviewAppeal(
-        violationId, appealStatus, appealRemarks);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to review appeal: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  // POST /api/guidance/violations/{id}/appeal/review
+  Future<void> guidanceReviewAppeal(
+    String violationId,
+    String appealStatus,
+    String appealRemarks,
+  ) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.guidanceReviewAppeal(
+        violationId,
+        appealStatus,
+        appealRemarks,
+      );
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to review appeal: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-// PUT /api/sao/violations/{id}/appeal/review
-Future<void> saoReviewAppeal(
-    String violationId, String appealStatus, String appealRemarks) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.saoReviewAppeal(
-        violationId, appealStatus, appealRemarks);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to review appeal: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  // PUT /api/sao/violations/{id}/appeal/review
+  Future<void> saoReviewAppeal(
+    String violationId,
+    String appealStatus,
+    String appealRemarks,
+  ) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.saoReviewAppeal(
+        violationId,
+        appealStatus,
+        appealRemarks,
+      );
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to review appeal: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-// PUT /api/sao/students/{studentNo}/dismiss
-Future<void> dismissStudent(String studentNo) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.dismissStudent(studentNo);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to dismiss student: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  Future<List<Map<String, dynamic>>> loadGuidanceAppeals() async {
+    _error = null;
+    try {
+      return await DatabaseService.getGuidanceAppeals();
+    } catch (e) {
+      _error = 'Failed to load appeals: ${e.toString()}';
+      notifyListeners();
+      return [];
+    }
   }
-}
 
-// PUT /api/sao/students/{studentNo}/cancel-dismiss
-Future<void> cancelDismiss(String studentNo) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.cancelDismiss(studentNo);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to cancel dismissal: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  // GET /api/sao/violations/appeals
+  Future<List<Map<String, dynamic>>> loadSaoAppeals() async {
+    _error = null;
+    try {
+      return await DatabaseService.getSaoAppeals();
+    } catch (e) {
+      _error = 'Failed to load appeals: ${e.toString()}';
+      notifyListeners();
+      return [];
+    }
   }
-}
 
-Future<void> submitAppeal(String violationId, String appealText) async {
-  _setLoading(true);
-  _error = null;
-  try {
-    await DatabaseService.submitAppeal(violationId, appealText);
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to submit appeal: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  // PUT /api/sao/students/{studentNo}/dismiss
+  Future<void> dismissStudent(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.dismissStudent(studentNo);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to dismiss student: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
-Future<void> markNotificationAsRead(int id) async {
+  // PUT /api/sao/students/{studentNo}/cancel-dismiss
+  Future<void> cancelDismiss(String studentNo) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.cancelDismiss(studentNo);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to cancel dismissal: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> submitAppeal(String violationId, String appealText) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      await DatabaseService.submitAppeal(violationId, appealText);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to submit appeal: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> markNotificationAsRead(int id) async {
     try {
       await DatabaseService.markNotificationAsRead(id);
       final index = _notifications.indexWhere((n) => n.id == id);
       if (index != -1) {
         _notifications[index] = NotificationModel(
-          id:             _notifications[index].id,
+          id: _notifications[index].id,
           targetUsername: _notifications[index].targetUsername,
-          targetRole:     _notifications[index].targetRole,
-          title:          _notifications[index].title,
-          message:        _notifications[index].message,
-          isRead:         true,
-          createdAt:      _notifications[index].createdAt,
+          targetRole: _notifications[index].targetRole,
+          title: _notifications[index].title,
+          message: _notifications[index].message,
+          isRead: true,
+          createdAt: _notifications[index].createdAt,
         );
         notifyListeners();
       }
@@ -662,23 +704,27 @@ Future<void> markNotificationAsRead(int id) async {
   Future<void> markAllNotificationsAsRead() async {
     try {
       await DatabaseService.markAllNotificationsAsRead();
-      _notifications = _notifications.map((n) => NotificationModel(
-        id:             n.id,
-        targetUsername: n.targetUsername,
-        targetRole:     n.targetRole,
-        title:          n.title,
-        message:        n.message,
-        isRead:         true,
-        createdAt:      n.createdAt,
-      )).toList();
+      _notifications = _notifications
+          .map(
+            (n) => NotificationModel(
+              id: n.id,
+              targetUsername: n.targetUsername,
+              targetRole: n.targetRole,
+              title: n.title,
+              message: n.message,
+              isRead: true,
+              createdAt: n.createdAt,
+            ),
+          )
+          .toList();
       notifyListeners();
     } catch (e) {
       _error = 'Failed to mark all as read: ${e.toString()}';
       notifyListeners();
     }
   }
- 
-Future<void> loadNotifications() async {
+
+  Future<void> loadNotifications() async {
     _setLoading(true);
     _error = null;
     try {
@@ -695,10 +741,14 @@ Future<void> loadNotifications() async {
 
   String _violationTypeToString(ViolationType type) {
     switch (type) {
-      case ViolationType.noId:        return 'No ID';
-      case ViolationType.noUniform:   return 'No Uniform';
-      case ViolationType.piercing:    return 'Piercing';
-      case ViolationType.coloredHair: return 'Colored Hair';
+      case ViolationType.noId:
+        return 'No ID';
+      case ViolationType.noUniform:
+        return 'No Uniform';
+      case ViolationType.piercing:
+        return 'Piercing';
+      case ViolationType.coloredHair:
+        return 'Colored Hair';
     }
   }
 

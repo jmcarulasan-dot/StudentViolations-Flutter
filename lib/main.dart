@@ -11,27 +11,33 @@ import 'screens/sao_dashboard.dart';
 import 'screens/guidance_dashboard.dart';
 import 'models/user.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'services/fcm_service.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+}
+
 void main() async {
-  // Required before using async in main
   WidgetsFlutterBinding.ensureInitialized();
   DatabaseService.initialize();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await FCMService.initialize();
   runApp(const MyApp());
 }
 
 // ── Official ACLC College of Mandaue Brand Colors ─────────────────────────────
 class ACLCColors {
-  static const red       = Color(0xFFFD070C);
-  static const navy      = Color(0xFF0F136E);
+  static const red = Color(0xFFFD070C);
+  static const navy = Color(0xFF0F136E);
   static const navyLight = Color(0xFF1A1F8F);
-  static const redDark   = Color(0xFFB80004);
-  static const white     = Colors.white;
-  static const gray      = Color(0xFFF5F7FA);
-  static const cardBg    = Color(0xFFFFFFFF);
+  static const redDark = Color(0xFFB80004);
+  static const white = Colors.white;
+  static const gray = Color(0xFFF5F7FA);
+  static const cardBg = Color(0xFFFFFFFF);
 }
 
 class MyApp extends StatelessWidget {
@@ -49,8 +55,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         home: const SplashScreen(),
         routes: {
-          '/login':     (context) => const LoginScreen(),
-          '/register':  (context) => const RegisterScreen(),
+          '/login': (context) => const LoginScreen(),
+          '/register': (context) => const RegisterScreen(),
           '/dashboard': (context) => const DashboardWrapper(),
         },
         theme: ThemeData(
@@ -152,7 +158,10 @@ class MyApp extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: ACLCColors.red, width: 1.5),
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
 
           chipTheme: ChipThemeData(
@@ -182,7 +191,10 @@ class MyApp extends StatelessWidget {
 
           snackBarTheme: SnackBarThemeData(
             backgroundColor: ACLCColors.navy,
-            contentTextStyle: const TextStyle(color: Colors.white, fontSize: 13),
+            contentTextStyle: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+            ),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -193,14 +205,26 @@ class MyApp extends StatelessWidget {
             bodyMedium: TextStyle(color: Colors.black87, fontSize: 14),
             bodySmall: TextStyle(color: Colors.black54, fontSize: 12),
             titleLarge: TextStyle(
-              fontSize: 22, fontWeight: FontWeight.w800, color: ACLCColors.navy),
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: ACLCColors.navy,
+            ),
             titleMedium: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w700, color: ACLCColors.navy),
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: ACLCColors.navy,
+            ),
             titleSmall: TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w600, color: ACLCColors.navy),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: ACLCColors.navy,
+            ),
             labelLarge: TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w700,
-              color: Colors.white, letterSpacing: 0.8),
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
       ),
@@ -208,7 +232,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Splash Screen 
+// Splash Screen
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -225,24 +249,17 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _checkSession() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // Check if user was previously logged in
     await authProvider.checkAuthStatus();
-
     if (!mounted) return;
-
     if (authProvider.currentUser != null) {
-      // User session found — go directly to dashboard
       Navigator.of(context).pushReplacementNamed('/dashboard');
     } else {
-      // No session — go to login
       Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show ACLC logo while checking session
     return const Scaffold(
       backgroundColor: Color(0xFF0F136E),
       body: Center(
@@ -266,7 +283,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-//  Dashboard Router 
+// Dashboard Router
 class DashboardWrapper extends StatelessWidget {
   const DashboardWrapper({super.key});
 
@@ -277,11 +294,16 @@ class DashboardWrapper extends StatelessWidget {
         final user = authProvider.currentUser;
         if (user == null) return const LoginScreen();
         switch (user.role) {
-          case UserRole.guard:    return const GuardDashboard();
-          case UserRole.student:  return const StudentDashboard();
-          case UserRole.sao:      return const SAODashboard();
-          case UserRole.guidance: return const GuidanceDashboard();
-          default:                return const LoginScreen();
+          case UserRole.guard:
+            return const GuardDashboard();
+          case UserRole.student:
+            return const StudentDashboard();
+          case UserRole.sao:
+            return const SAODashboard();
+          case UserRole.guidance:
+            return const GuidanceDashboard();
+          default:
+            return const LoginScreen();
         }
       },
     );

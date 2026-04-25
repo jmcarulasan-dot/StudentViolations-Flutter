@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
 import '../models/violation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'notifications_screen.dart';
 
 const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -21,17 +22,18 @@ class _GuardDashboardState extends State<GuardDashboard> {
   final _historyController = TextEditingController();
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
-  final _validateController = TextEditingController();
 
-  String? _selectedStudentNo;
-  String? _selectedStudentName;
+  // QR / Validate state
+  String? _scannedStudentNo;
+  Map<String, dynamic> _scannedStudentData = {};
+  bool _scannerActive = true;
+
+  // Record violation form state (used AFTER scanning)
   String? _selectedViolationType;
   String _selectedSeverity = 'minor';
 
-  // Results
   Map<String, dynamic> _historyResult = {};
   Map<String, dynamic> _summaryResult = {};
-  Map<String, dynamic> _validateResult = {};
 
   final List<String> _violationTypes = [
     'No ID',
@@ -51,7 +53,9 @@ class _GuardDashboardState extends State<GuardDashboard> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<ViolationProvider>(context, listen: false).loadStudents();
+      final vp = Provider.of<ViolationProvider>(context, listen: false);
+      vp.loadStudents();
+      vp.loadNotifications();
     });
   }
 
@@ -61,7 +65,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
     _historyController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();
-    _validateController.dispose();
     super.dispose();
   }
 
@@ -78,6 +81,12 @@ class _GuardDashboardState extends State<GuardDashboard> {
         foregroundColor: Colors.white,
         elevation: 3,
         actions: [
+          _NotificationBell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => _showLogoutDialog(context),
@@ -107,31 +116,8 @@ class _GuardDashboardState extends State<GuardDashboard> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(0, Icons.report_rounded, 'Record'),
+              _navItem(0, Icons.qr_code_scanner_rounded, 'Scan & Record'),
               _navItem(1, Icons.history_rounded, 'History'),
-              GestureDetector(
-                onTap: () => _showValidateDialog(),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: _navy,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: _navy.withOpacity(0.4),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.qr_code_scanner_rounded,
-                    color: Colors.white,
-                    size: 26,
-                  ),
-                ),
-              ),
               _navItem(2, Icons.bar_chart_rounded, 'Summary'),
               _navItem(3, Icons.people_rounded, 'Students'),
             ],
@@ -173,7 +159,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
   Widget _buildContent() {
     switch (_currentIndex) {
       case 0:
-        return _buildRecordTab();
+        return _buildScanAndRecordTab();
       case 1:
         return _buildHistoryTab();
       case 2:
@@ -181,15 +167,16 @@ class _GuardDashboardState extends State<GuardDashboard> {
       case 3:
         return _buildStudentsTab();
       default:
-        return _buildRecordTab();
+        return _buildScanAndRecordTab();
     }
   }
 
-  //Record Tab
-  Widget _buildRecordTab() {
+  // ── TAB 0: Scan QR → show student data → record violation ──────────────────
+  Widget _buildScanAndRecordTab() {
     final name =
         Provider.of<AuthProvider>(context, listen: false).currentUser?.name ??
         'Guard';
+
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
         return SingleChildScrollView(
@@ -243,7 +230,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
                             ),
                           ),
                           const Text(
-                            'Tap 🔍 in the nav bar to scan student QR code',
+                            'Scan student QR code to record a violation',
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.white60,
@@ -257,143 +244,274 @@ class _GuardDashboardState extends State<GuardDashboard> {
               ),
               const SizedBox(height: 16),
 
-              _sectionTitle('📋 Record Violation', _red),
-              const SizedBox(height: 12),
+              // ── QR Scanner ──────────────────────────────────────────────────
+              _sectionTitle('📷 Scan Student QR Code', _navy),
+              const SizedBox(height: 10),
 
-              // Student dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedStudentNo,
-                isExpanded: true,
-                decoration: _inputDeco(
-                  'Select Student *',
-                  Icons.person_search_rounded,
+              Container(
+                height: 220,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: Colors.black,
+                  boxShadow: [
+                    BoxShadow(
+                      color: _navy.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                hint: vp.isLoading
-                    ? const Text(
-                        'Loading students...',
-                        style: TextStyle(fontSize: 13),
-                      )
-                    : const Text(
-                        'Choose a student',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                items: vp.students
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s.studentNo ?? s.id,
-                        child: Text(
-                          '${s.name} (${s.studentNo ?? s.id})',
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) {
-                  setState(() {
-                    _selectedStudentNo = v;
-                    _selectedStudentName = vp.students
-                        .firstWhere(
-                          (s) => (s.studentNo ?? s.id) == v,
-                          orElse: () => vp.students.first,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: _scannerActive
+                      ? Stack(
+                          children: [
+                            MobileScanner(
+                              onDetect: (capture) {
+                                final value = capture.barcodes.first.rawValue;
+                                if (value != null &&
+                                    value != _scannedStudentNo) {
+                                  setState(() {
+                                    _scannedStudentNo = value;
+                                    _scannerActive = false;
+                                    _scannedStudentData = {};
+                                    _selectedViolationType = null;
+                                    _selectedSeverity = 'minor';
+                                    _remarksController.clear();
+                                  });
+                                  _loadScannedStudent(value, vp);
+                                }
+                              },
+                            ),
+                            // Scan overlay corners
+                            Positioned.fill(
+                              child: Center(
+                                child: SizedBox(
+                                  width: 160,
+                                  height: 160,
+                                  child: Stack(
+                                    children: [
+                                      Positioned(
+                                        top: 0,
+                                        left: 0,
+                                        child: _corner(top: true, left: true),
+                                      ),
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: _corner(top: true, left: false),
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        left: 0,
+                                        child: _corner(top: false, left: true),
+                                      ),
+                                      Positioned(
+                                        bottom: 0,
+                                        right: 0,
+                                        child: _corner(top: false, left: false),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 10,
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Point camera at student QR code',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         )
-                        .name;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Violation type
-              DropdownButtonFormField<String>(
-                value: _selectedViolationType,
-                decoration: _inputDeco(
-                  'Violation Type *',
-                  Icons.warning_rounded,
-                ),
-                hint: const Text('Select type', style: TextStyle(fontSize: 13)),
-                items: _violationTypes
-                    .map(
-                      (t) => DropdownMenuItem(
-                        value: t,
-                        child: Text(t, style: const TextStyle(fontSize: 13)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedViolationType = v),
-              ),
-              const SizedBox(height: 12),
-
-              // Severity
-              DropdownButtonFormField<String>(
-                value: _selectedSeverity,
-                decoration: _inputDeco('Severity *', Icons.speed_rounded),
-                items: _severities
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(
-                          s.toUpperCase(),
-                          style: const TextStyle(fontSize: 13),
+                      : Container(
+                          color: Colors.black,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.green,
+                                  size: 48,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Scanned: ${_scannedStudentNo ?? ''}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _scannerActive = true;
+                                      _scannedStudentNo = null;
+                                      _scannedStudentData = {};
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.qr_code_scanner_rounded,
+                                    color: Colors.white70,
+                                  ),
+                                  label: const Text(
+                                    'Scan Again',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) =>
-                    setState(() => _selectedSeverity = v ?? 'minor'),
-              ),
-              const SizedBox(height: 12),
-
-              TextFormField(
-                controller: _remarksController,
-                maxLines: 2,
-                style: const TextStyle(fontSize: 13),
-                decoration: _inputDeco(
-                  'Remarks (Optional)',
-                  Icons.note_outlined,
                 ),
+              ),
+              const SizedBox(height: 10),
+
+              // Manual entry fallback
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      style: const TextStyle(fontSize: 13),
+                      decoration: _inputDeco(
+                        'Or enter StudentNo manually',
+                        Icons.badge_rounded,
+                      ),
+                      onFieldSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          setState(() {
+                            _scannedStudentNo = val.trim().toUpperCase();
+                            _scannerActive = false;
+                            _scannedStudentData = {};
+                          });
+                          _loadScannedStudent(val.trim().toUpperCase(), vp);
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
-              if (vp.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    vp.error!,
-                    style: const TextStyle(color: _red, fontSize: 12),
+              // ── Student Info Card (after scan) ──────────────────────────────
+              if (vp.isLoading && _scannedStudentData.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(color: _navy),
                   ),
                 ),
 
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: vp.isLoading ? null : _submitViolation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _red,
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              if (_scannedStudentData.isNotEmpty) ...[
+                _buildStudentInfoCard(_scannedStudentData),
+                const SizedBox(height: 16),
+
+                // ── Violation Form ──────────────────────────────────────────
+                _sectionTitle('📋 Record Violation', _red),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: _selectedViolationType,
+                  decoration: _inputDeco(
+                    'Violation Type *',
+                    Icons.warning_rounded,
                   ),
-                  icon: vp.isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                  hint: const Text(
+                    'Select type',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  items: _violationTypes
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t, style: const TextStyle(fontSize: 13)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedViolationType = v),
+                ),
+                const SizedBox(height: 12),
+
+                DropdownButtonFormField<String>(
+                  value: _selectedSeverity,
+                  decoration: _inputDeco('Severity *', Icons.speed_rounded),
+                  items: _severities
+                      .map(
+                        (s) => DropdownMenuItem(
+                          value: s,
+                          child: Text(
+                            s.toUpperCase(),
+                            style: const TextStyle(fontSize: 13),
                           ),
-                        )
-                      : const Icon(Icons.report_rounded, size: 20),
-                  label: Text(
-                    vp.isLoading ? 'Submitting...' : 'Submit Violation',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (v) =>
+                      setState(() => _selectedSeverity = v ?? 'minor'),
+                ),
+                const SizedBox(height: 12),
+
+                TextFormField(
+                  controller: _remarksController,
+                  maxLines: 2,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: _inputDeco('Remarks ()', Icons.note_outlined),
+                ),
+                const SizedBox(height: 16),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: vp.isLoading ? null : _submitViolation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _red,
+                      foregroundColor: Colors.white,
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: vp.isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.report_rounded, size: 20),
+                    label: Text(
+                      vp.isLoading ? 'Submitting...' : 'Submit Violation',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         );
@@ -401,7 +519,178 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // History Tab
+  Widget _buildStudentInfoCard(Map<String, dynamic> data) {
+    final level = data['warning_level'] ?? 'green';
+    final color = _warningColor(level);
+    final violations = (data['violations'] as List?) ?? [];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: color.withOpacity(0.15),
+                  child: Text(
+                    (data['name'] ?? 'S')[0].toUpperCase(),
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data['name'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: _navy,
+                        ),
+                      ),
+                      Text(
+                        data['student_no'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _warningBadge(level),
+              ],
+            ),
+          ),
+          // Stats row
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                _miniStat(
+                  'Violations',
+                  (data['violation_count'] ?? 0).toString(),
+                  color,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _warningAction(level),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Recent violations
+          if (violations.isNotEmpty) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+              child: Text(
+                'Recent Violations',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ),
+            ...violations
+                .take(2)
+                .map(
+                  (v) => ListTile(
+                    dense: true,
+                    title: Text(
+                      v['type'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${(v['date'] ?? '').toString().substring(0, 10)} • ${v['severity'] ?? ''}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    trailing: _statusChip(v['status'] ?? 'Pending'),
+                  ),
+                ),
+            const SizedBox(height: 6),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStat(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: color.withOpacity(0.8)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── History Tab ─────────────────────────────────────────────────────────────
   Widget _buildHistoryTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -455,7 +744,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
               ),
               const SizedBox(height: 16),
 
-              // Student info card
               if (_historyResult.isNotEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(14),
@@ -496,7 +784,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
                 ),
                 const SizedBox(height: 12),
 
-                // Violations list
                 if (((_historyResult['violations'] as List?) ?? []).isEmpty)
                   _emptyState('No violations found')
                 else
@@ -512,7 +799,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // Summary Tab
+  // ── Summary Tab ─────────────────────────────────────────────────────────────
   Widget _buildSummaryTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -596,23 +883,25 @@ class _GuardDashboardState extends State<GuardDashboard> {
                 ),
               ] else
                 Center(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 32),
-                      Icon(
-                        Icons.bar_chart_rounded,
-                        size: 48,
-                        color: Colors.grey.shade300,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Enter a date range to view summary',
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 13,
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.bar_chart_rounded,
+                          size: 48,
+                          color: Colors.grey.shade300,
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Enter a date range to view summary',
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -622,7 +911,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // Students Tab
+  // ── Students Tab ─────────────────────────────────────────────────────────────
   Widget _buildStudentsTab() {
     return Consumer<ViolationProvider>(
       builder: (context, vp, _) {
@@ -727,204 +1016,20 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  // Validate Dialog
-  void _showValidateDialog() {
-    _validateController.clear();
-    _validateResult = {};
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.qr_code_rounded, color: _navy, size: 22),
-              SizedBox(width: 8),
-              Text(
-                'Validate Student',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _navy,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // QR placeholder
-                Container(
-                  width: double.infinity,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.black,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: MobileScanner(
-                      onDetect: (capture) {
-                        final barcode = capture.barcodes.first;
-                        final value = barcode.rawValue;
-                        if (value != null) {
-                          _validateController.text = value;
-                        }
-                      },
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Text(
-                          'OR enter manually',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade400,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      Expanded(child: Divider(color: Colors.grey.shade300)),
-                    ],
-                  ),
-                ),
-                TextField(
-                  controller: _validateController,
-                  style: const TextStyle(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. C26-01-0001-MAN121',
-                    prefixIcon: const Icon(
-                      Icons.badge_rounded,
-                      color: _navy,
-                      size: 18,
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFF7F8FC),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFFDDE1EE)),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-
-                // Result
-                if (_validateResult.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _warningColor(
-                        _validateResult['warning_level'],
-                      ).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: _warningColor(
-                          _validateResult['warning_level'],
-                        ).withOpacity(0.3),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _validateResult['name'] ?? '',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          _validateResult['student_no'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            _warningBadge(
-                              _validateResult['warning_level'] ?? 'Safe',
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${_validateResult['violation_count'] ?? 0} violation(s)',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.black54,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                'Close',
-                style: TextStyle(color: Colors.black54),
-              ),
-            ),
-            Consumer<ViolationProvider>(
-              builder: (ctx, vp, _) => ElevatedButton(
-                onPressed: vp.isLoading
-                    ? null
-                    : () async {
-                        final studentNo = _validateController.text.trim();
-                        if (studentNo.isEmpty) return;
-                        await vp.validateStudent(studentNo);
-                        setDialogState(() {
-                          _validateResult = vp.validatedStudent;
-                        });
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _navy,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: vp.isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('Validate'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  // ── Actions ──────────────────────────────────────────────────────────────────
+  Future<void> _loadScannedStudent(
+    String studentNo,
+    ViolationProvider vp,
+  ) async {
+    await vp.validateStudent(studentNo);
+    setState(() {
+      _scannedStudentData = vp.validatedStudent;
+    });
   }
 
-  // Actions
   Future<void> _submitViolation() async {
-    if (_selectedStudentNo == null) {
-      _showSnack('Please select a student', isError: true);
+    if (_scannedStudentNo == null || _scannedStudentData.isEmpty) {
+      _showSnack('Please scan a student first', isError: true);
       return;
     }
     if (_selectedViolationType == null) {
@@ -934,7 +1039,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
 
     final vp = Provider.of<ViolationProvider>(context, listen: false);
     await vp.recordViolation(
-      studentId: _selectedStudentNo!,
+      studentId: _scannedStudentNo!,
       type: _parseViolationType(_selectedViolationType!),
       reportedBy:
           Provider.of<AuthProvider>(context, listen: false).currentUser?.name ??
@@ -945,10 +1050,10 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
 
     if (vp.error == null) {
-      _showSnack('Violation recorded successfully');
+      _showSnack('Violation recorded successfully! ✓');
+      // Reload student data to show updated violation count
+      await _loadScannedStudent(_scannedStudentNo!, vp);
       setState(() {
-        _selectedStudentNo = null;
-        _selectedStudentName = null;
         _selectedViolationType = null;
         _selectedSeverity = 'minor';
         _remarksController.clear();
@@ -965,7 +1070,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
       return;
     }
     final vp = Provider.of<ViolationProvider>(context, listen: false);
-    await vp.validateStudent(studentNo);
+    await vp.validateStudent(studentNo.toUpperCase());
     setState(() {
       _historyResult = vp.validatedStudent;
     });
@@ -1005,7 +1110,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     }
   }
 
-  // Helpers
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   ViolationType _parseViolationType(String type) {
     final t = type.toLowerCase();
     if (t.contains('uniform')) return ViolationType.noUniform;
@@ -1051,7 +1156,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
           ),
           const SizedBox(height: 4),
           Text(
-            v['date'] ?? '',
+            v['date']?.toString().substring(0, 10) ?? '',
             style: const TextStyle(fontSize: 12, color: Colors.black45),
           ),
           if ((v['details'] ?? '').isNotEmpty) ...[
@@ -1174,10 +1279,27 @@ class _GuardDashboardState extends State<GuardDashboard> {
 
   Color _warningColor(String? level) {
     switch ((level ?? '').toLowerCase()) {
-      case 'yellow':  return Colors.yellow.shade700; // 1 violation
-      case 'orange':  return Colors.orange;          // 2 violations
-      case 'red':     return _red;                   // 3+ violations
-      default:        return Colors.green;           // 0 violations
+      case 'yellow':
+        return Colors.yellow.shade700;
+      case 'orange':
+        return Colors.orange;
+      case 'red':
+        return _red;
+      default:
+        return Colors.green;
+    }
+  }
+
+  String _warningAction(String level) {
+    switch (level.toLowerCase()) {
+      case 'yellow':
+        return 'Issue written warning';
+      case 'orange':
+        return 'Call parents / schedule counseling';
+      case 'red':
+        return 'Recommended for dismissal';
+      default:
+        return 'No action needed';
     }
   }
 
@@ -1259,7 +1381,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
     );
   }
 
-  Widget _corner(bool top, bool left) => SizedBox(
+  Widget _corner({required bool top, required bool left}) => SizedBox(
     width: 22,
     height: 22,
     child: CustomPaint(
@@ -1355,4 +1477,50 @@ class _CornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CornerPainter o) => false;
+}
+
+// ── Reusable notification bell widget ────────────────────────────────────────
+class _NotificationBell extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NotificationBell({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ViolationProvider>(
+      builder: (ctx, vp, _) {
+        final unread = vp.notifications.where((n) => !n.isRead).length;
+        return Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded),
+              onPressed: onTap,
+            ),
+            if (unread > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFD070C),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      unread > 9 ? '9+' : unread.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
 }
