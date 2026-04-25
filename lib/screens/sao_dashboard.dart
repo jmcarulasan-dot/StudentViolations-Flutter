@@ -7,6 +7,7 @@ import 'notifications_screen.dart';
 const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
 
+
 class SAODashboard extends StatefulWidget {
   const SAODashboard({super.key});
   @override
@@ -491,6 +492,97 @@ class _SAODashboardState extends State<SAODashboard>
                         ),
                 ),
                 const SizedBox(height: 16),
+
+// --- Pending Dismissals ---
+_buildSectionCard(
+  title: '⚠️ Pending Dismissals',
+  child: Consumer<ViolationProvider>(
+    builder: (context, vp, _) {
+      final pending = vp.pendingDismissals;
+
+      if (pending.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: Text(
+              'No students pending dismissal',
+              style: TextStyle(fontSize: 13, color: Colors.black45),
+            ),
+          ),
+        );
+      }
+
+      return Column(
+        children: pending.map((a) => Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: _red.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _red.withOpacity(0.25)),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${a['FirstName']} ${a['LastName']}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      a['StudentNo'] ?? '',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => _dismissStudent(a['StudentNo'], vp),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _red,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Dismiss',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () => _cancelDismiss(a['StudentNo'], vp),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green,
+                  side: const BorderSide(color: Colors.green),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+        )).toList(),
+      );
+    },
+  ),
+),
+const SizedBox(height: 16),
 
                 // Student report search
                 _buildSectionCard(

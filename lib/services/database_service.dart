@@ -871,6 +871,19 @@ class DatabaseService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getPendingDismissals() async {
+  final token = await _getToken();
+  final response = await http.get(
+    Uri.parse('$_baseUrl/api/sao/students/pending-dismissal'),
+    headers: {'Authorization': 'Bearer $token'},
+  );
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    return List<Map<String, dynamic>>.from(data);
+  }
+  return [];
+}
+
   // GET /api/sao/users
   static Future<List<User>> getAllUsers() async {
     try {

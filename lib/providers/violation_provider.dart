@@ -43,6 +43,8 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> get violationSummary => _violationSummary;
   Map<String, dynamic> get saoSummary => _saoSummary;
   Map<String, dynamic> get studentReport => _studentReport;
+  List<Map<String, dynamic>> _pendingDismissals = [];
+  List<Map<String, dynamic>> get pendingDismissals => _pendingDismissals;
 
   //STUDENTS METHOD
   // GET /api/student/violations
