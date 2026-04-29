@@ -34,7 +34,6 @@ class User {
       'gradeSection': gradeSection,
       'contactNumber': contactNumber,
       'studentNo': studentNo,
-      
     };
   }
 

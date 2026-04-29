@@ -7,7 +7,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.248.24.11:5277';
+  static const String _baseUrl = 'http://192.168.98.11:5277';
 
   static void initialize() {}
 
@@ -263,6 +263,18 @@ class DatabaseService {
       return {};
     } catch (e) {
       throw Exception('Failed to get profile: $e');
+    }
+  }
+
+  static Future<void> uploadProfilePhoto(String base64Photo) async {
+    final headers = await _authHeaders();
+    final response = await http.put(
+      Uri.parse('$_baseUrl/api/student/profile/photo'),
+      headers: headers,
+      body: jsonEncode({'base64Photo': base64Photo}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Upload failed');
     }
   }
 
@@ -872,17 +884,26 @@ class DatabaseService {
   }
 
   static Future<List<Map<String, dynamic>>> getPendingDismissals() async {
-  final token = await _getToken();
-  final response = await http.get(
-    Uri.parse('$_baseUrl/api/sao/students/pending-dismissal'),
-    headers: {'Authorization': 'Bearer $token'},
-  );
-  if (response.statusCode == 200) {
-    final data = jsonDecode(response.body);
-    return List<Map<String, dynamic>>.from(data);
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/sao/pending-dismissals'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        // handle both wrapped and unwrapped responses
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
   }
-  return [];
-}
 
   // GET /api/sao/users
   static Future<List<User>> getAllUsers() async {

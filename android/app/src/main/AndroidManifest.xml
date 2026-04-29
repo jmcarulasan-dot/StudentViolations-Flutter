@@ -2,7 +2,7 @@
 
     <!-- Camera permission for QR code scanning -->
     <uses-permission android:name="android.permission.CAMERA" />
-
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <application
         android:label="violation"
         android:name="${applicationName}"

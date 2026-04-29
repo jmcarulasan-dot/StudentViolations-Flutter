@@ -3,6 +3,8 @@ import '../models/violation.dart';
 import '../models/user.dart';
 import '../services/database_service.dart';
 import '../models/notification_model.dart';
+import 'dart:io';
+import 'dart:convert';
 
 class ViolationProvider with ChangeNotifier {
   List<Violation> _violations = [];
@@ -82,6 +84,18 @@ class ViolationProvider with ChangeNotifier {
       notifyListeners();
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<String?> uploadProfilePhoto(File imageFile) async {
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final base64String = base64Encode(bytes);
+      await DatabaseService.uploadProfilePhoto(base64String);
+      await loadMyProfile();
+      return null;
+    } catch (e) {
+      return 'Upload failed. Try again.';
     }
   }
 
@@ -547,6 +561,20 @@ class ViolationProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _error = 'Failed to warn student: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> loadPendingDismissals() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _pendingDismissals = await DatabaseService.getPendingDismissals();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load dismissals: ${e.toString()}';
       notifyListeners();
     } finally {
       _setLoading(false);
