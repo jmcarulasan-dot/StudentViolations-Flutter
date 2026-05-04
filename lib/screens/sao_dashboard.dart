@@ -926,41 +926,46 @@ class _SAODashboardState extends State<SAODashboard>
   }
 
   Widget _userTile(user, ViolationProvider vp) {
-    final roleDisplay = _roleLabel(user.role.toString().split('.').last);
-    final roleColor = _roleColor(roleDisplay);
+  final roleDisplay = _roleLabel(user.role.toString().split('.').last);
+  final roleColor = _roleColor(roleDisplay);
 
-    return Column(
-      children: [
-        ListTile(
-          leading: CircleAvatar(
-            radius: 20,
-            backgroundColor: roleColor.withOpacity(0.12),
-            child: Text(
-              user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-              style: TextStyle(color: roleColor, fontWeight: FontWeight.w700),
-            ),
-          ),
-          title: Text(
-            user.name,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          ),
-          subtitle: Text(
-            '@${user.username} • ${roleDisplay.toUpperCase()}',
-            style: const TextStyle(fontSize: 12, color: Colors.black45),
-          ),
-          trailing: IconButton(
-            icon: Icon(
-              Icons.delete_rounded,
-              color: Colors.grey.shade400,
-              size: 20,
-            ),
-            onPressed: () => _deleteUser(user.id, vp),
+  return Column(
+    children: [
+      ListTile(
+        leading: CircleAvatar(
+          radius: 20,
+          backgroundColor: roleColor.withOpacity(0.12),
+          child: Text(
+            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+            style: TextStyle(color: roleColor, fontWeight: FontWeight.w700),
           ),
         ),
-        const Divider(height: 1, indent: 56),
-      ],
-    );
-  }
+        title: Text(
+          user.name,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+        ),
+        subtitle: Text(
+          '@${user.username} • ${roleDisplay.toUpperCase()}',
+          style: const TextStyle(fontSize: 12, color: Colors.black45),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(Icons.edit_rounded, color: _navy, size: 20),
+              onPressed: () => _showEditUserDialog(user, vp),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_rounded, color: Colors.grey.shade400, size: 20),
+              onPressed: () => _deleteUser(user.id, vp),
+            ),
+          ],
+        ),
+      ),
+      const Divider(height: 1, indent: 56),
+    ],
+  );
+}
 
   String _roleLabel(String role) {
     switch (role.toLowerCase()) {
@@ -1047,7 +1052,7 @@ class _SAODashboardState extends State<SAODashboard>
     }
   }
 
-  Future<void> _deleteUser(String id, ViolationProvider vp) async {
+ Future<void> _deleteUser(String id, ViolationProvider vp) async {
     final confirm = await _showConfirmDialog(
       'Delete User',
       'This cannot be undone.',
@@ -1057,6 +1062,54 @@ class _SAODashboardState extends State<SAODashboard>
     _showSnack(
       vp.error == null ? 'User deleted' : vp.error!,
       isError: vp.error != null,
+    );
+  }
+
+  void _showEditUserDialog(user, ViolationProvider vp) {
+    final firstNameController = TextEditingController(text: user.name.split(' ').first);
+    final lastNameController = TextEditingController(text: user.name.split(' ').last);
+    final emailController = TextEditingController();
+    final contactController = TextEditingController(text: user.contactNumber ?? '');
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Edit User', style: TextStyle(color: _navy, fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: firstNameController, decoration: _inputDeco('First Name', Icons.person_rounded)),
+              const SizedBox(height: 10),
+              TextField(controller: lastNameController, decoration: _inputDeco('Last Name', Icons.person_rounded)),
+              const SizedBox(height: 10),
+              TextField(controller: emailController, decoration: _inputDeco('Email', Icons.email_rounded)),
+              const SizedBox(height: 10),
+              TextField(controller: contactController, decoration: _inputDeco('Contact Number', Icons.phone_rounded)),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              await vp.updateUser(user.id, {
+                'firstName': firstNameController.text.trim(),
+                'lastName': lastNameController.text.trim(),
+                if (emailController.text.trim().isNotEmpty) 'email': emailController.text.trim(),
+                if (contactController.text.trim().isNotEmpty) 'contactNumber': contactController.text.trim(),
+              });
+              if (mounted) {
+                Navigator.of(dialogContext).pop();
+                _showSnack(vp.error == null ? 'User updated' : vp.error!, isError: vp.error != null);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _navy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -7,7 +7,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.253.60.11:5277';
+  static const String _baseUrl = 'http://10.131.40.11:5277';
 
   static void initialize() {}
 
@@ -887,7 +887,7 @@ class DatabaseService {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/sao/pending-dismissals'),
+        Uri.parse('$_baseUrl/api/sao/students/pending-dismissal'),
         headers: headers,
       );
       final data = jsonDecode(response.body);

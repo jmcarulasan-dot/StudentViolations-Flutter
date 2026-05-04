@@ -1080,19 +1080,28 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
 
   // Actions
   Future<void> _searchReport() async {
-    final studentNo = _searchController.text.trim();
-    if (studentNo.isEmpty) {
-      _showSnack('Enter a StudentNo to search', isError: true);
-      return;
-    }
-    final vp = Provider.of<ViolationProvider>(context, listen: false);
-    final result = await vp.getGuidanceStudentReport(studentNo);
-    if (result != null) {
-      setState(() => _studentReport = result);
-    } else {
-      _showSnack('Student not found', isError: true);
-    }
+  final input = _searchController.text.trim();
+  if (input.isEmpty) {
+    _showSnack('Enter a StudentNo or Name to search', isError: true);
+    return;
   }
+  final vp = Provider.of<ViolationProvider>(context, listen: false);
+
+  String studentNo = input;
+  final match = vp.students.where(
+    (s) => s.name.toLowerCase().contains(input.toLowerCase())
+  ).firstOrNull;
+  if (match != null) {
+    studentNo = match.studentNo ?? input;
+  }
+
+  final result = await vp.getGuidanceStudentReport(studentNo);
+  if (result != null) {
+    setState(() => _studentReport = result);
+  } else {
+    _showSnack('Student not found', isError: true);
+  }
+}
 
   Future<void> _warnStudent(String? studentNo) async {
     if (studentNo == null) return;
