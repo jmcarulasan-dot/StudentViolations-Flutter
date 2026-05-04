@@ -54,7 +54,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 // MAIN SERVICE CLASS
 class FCMService {
-  static const String _baseUrl = 'http://192.168.98.11:5277';
+  static const String _baseUrl = 'http://10.253.60.11:5277';
 
   static Future<void> initialize() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

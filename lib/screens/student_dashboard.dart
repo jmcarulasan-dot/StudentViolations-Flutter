@@ -124,12 +124,10 @@ class _StudentDashboardState extends State<StudentDashboard>
       builder: (context, vp, _) {
         // only show violations that haven't been appealed yet
         final appealable = vp.violations
-            .where(
-              (v) =>
-                  (v.remarks ?? '').isEmpty ||
-                  v.remarks == 'No additional details',
-            )
-            .toList();
+    .where(
+      (v) => v.appealStatus == null || v.appealStatus == 'None',
+    )
+    .toList();
 
         // violations that already have an appeal submitted
         final appealed = vp.violations

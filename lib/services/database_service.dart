@@ -7,7 +7,7 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://192.168.98.11:5277';
+  static const String _baseUrl = 'http://10.253.60.11:5277';
 
   static void initialize() {}
 
