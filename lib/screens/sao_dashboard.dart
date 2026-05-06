@@ -24,7 +24,7 @@ class _SAODashboardState extends State<SAODashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vp = Provider.of<ViolationProvider>(context, listen: false);
       vp.loadSaoViolations();
@@ -84,6 +84,7 @@ class _SAODashboardState extends State<SAODashboard>
             Tab(icon: Icon(Icons.bar_chart_rounded, size: 18), text: 'Summary'),
             Tab(icon: Icon(Icons.gavel_rounded, size: 18), text: 'Appeals'),
             Tab(icon: Icon(Icons.people_rounded, size: 18), text: 'Users'),
+            Tab(icon: Icon(Icons.block_rounded, size: 18), text: 'Dismiss'),
           ],
         ),
       ),
@@ -94,10 +95,160 @@ class _SAODashboardState extends State<SAODashboard>
           _buildSummaryTab(),
           _buildAppealsTab(),
           _buildUsersTab(),
+          _buildDismissTab(),
         ],
       ),
     );
   }
+  // ── Dismiss Tab ──────────────────────────────────────────────────────────────
+Widget _buildDismissTab() {
+  return Consumer<ViolationProvider>(
+    builder: (context, vp, _) {
+      return RefreshIndicator(
+        onRefresh: () async {
+          await vp.loadPendingDismissals();
+          await vp.loadDismissedStudents();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Pending Dismissal ──
+              _buildSectionCard(
+                title: '⚠️ Pending Dismissal',
+                child: vp.pendingDismissals.isEmpty
+                    ? _emptyState('No students pending dismissal')
+                    : Column(
+                        children: vp.pendingDismissals.map((a) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: _red.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _red.withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${a['first_name']} ${a['last_name']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      a['student_no'] ?? '',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.black45,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black38,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () => _dismissStudent(a['student_no'], vp),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _red,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Dismiss', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              ),
+                              const SizedBox(width: 8),
+                              OutlinedButton(
+                                onPressed: () => _cancelDismiss(a['student_no'], vp),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.green,
+                                  side: const BorderSide(color: Colors.green),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ),
+              ),
+              const SizedBox(height: 16),
+
+              // ── Dismissed Students ──
+              _buildSectionCard(
+                title: '🚫 Dismissed Students',
+                child: vp.dismissedStudents.isEmpty
+                    ? _emptyState('No dismissed students')
+                    : Column(
+                        children: vp.dismissedStudents.map((a) => Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.04),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.withOpacity(0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${a['first_name']} ${a['last_name']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      a['student_no'] ?? '',
+                                      style: const TextStyle(fontSize: 12, color: Colors.black45),
+                                    ),
+                                    Text(
+                                      '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
+                                      style: const TextStyle(fontSize: 11, color: Colors.black38),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () => _cancelDismiss(a['student_no'], vp),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.green,
+                                  side: const BorderSide(color: Colors.green),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                icon: const Icon(Icons.restore_rounded, size: 14),
+                                label: const Text('Restore', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        )).toList(),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
   // ── Violations Tab ──────────────────────────────────────────────────────────
   Widget _buildViolationsTab(String name) {
@@ -416,6 +567,7 @@ class _SAODashboardState extends State<SAODashboard>
           onRefresh: () async {
             await vp.loadSaoSummary();
             await vp.loadPendingDismissals();
+            await vp.loadDismissedStudents();
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -496,127 +648,7 @@ class _SAODashboardState extends State<SAODashboard>
                 ),
                 const SizedBox(height: 16),
 
-                // --- Pending Dismissals ---
-                _buildSectionCard(
-                  title: '⚠️ Pending Dismissals',
-                  child: Consumer<ViolationProvider>(
-                    builder: (context, vp, _) {
-                      final pending = vp.pendingDismissals;
-
-                      if (pending.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(
-                            child: Text(
-                              'No students pending dismissal',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.black45,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-
-                      return Column(
-                        children: pending
-                            .map(
-                              (a) => Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: _red.withOpacity(0.04),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: _red.withOpacity(0.25),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${a['FirstName']} ${a['LastName']}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 14,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          Text(
-                                            a['StudentNo'] ?? '',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.black45,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () =>
-                                          _dismissStudent(a['StudentNo'], vp),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _red,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Dismiss',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    OutlinedButton(
-                                      onPressed: () =>
-                                          _cancelDismiss(a['StudentNo'], vp),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.green,
-                                        side: const BorderSide(
-                                          color: Colors.green,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Cancel',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-
+              
                 // Student report search
                 _buildSectionCard(
                   title: '🔍 Student Report',

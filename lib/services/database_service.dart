@@ -905,6 +905,29 @@ class DatabaseService {
     }
   }
 
+  // GET /api/sao/students/dismissed
+static Future<List<Map<String, dynamic>>> getDismissedStudents() async {
+  try {
+    final headers = await _authHeaders();
+    final response = await http.get(
+      Uri.parse('$_baseUrl/api/sao/students/dismissed'),
+      headers: headers,
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      } else if (data['data'] != null) {
+        return List<Map<String, dynamic>>.from(data['data']);
+      }
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
+
   // GET /api/sao/users
   static Future<List<User>> getAllUsers() async {
     try {

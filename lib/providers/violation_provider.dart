@@ -47,6 +47,8 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> get studentReport => _studentReport;
   List<Map<String, dynamic>> _pendingDismissals = [];
   List<Map<String, dynamic>> get pendingDismissals => _pendingDismissals;
+  List<Map<String, dynamic>> _dismissedStudents = [];
+ List<Map<String, dynamic>> get dismissedStudents => _dismissedStudents;
 
   //STUDENTS METHOD
   // GET /api/student/violations
@@ -580,6 +582,20 @@ class ViolationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+  // GET /api/sao/students/dismissed
+Future<void> loadDismissedStudents() async {
+  _setLoading(true);
+  _error = null;
+  try {
+    _dismissedStudents = await DatabaseService.getDismissedStudents();
+    notifyListeners();
+  } catch (e) {
+    _error = 'Failed to load dismissed students: ${e.toString()}';
+    notifyListeners();
+  } finally {
+    _setLoading(false);
+  }
+}
 
   // PUT /api/guidance/students/{studentNo}/recommend-dismiss
   Future<void> recommendDismiss(String studentNo) async {
