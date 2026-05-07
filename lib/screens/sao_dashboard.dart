@@ -32,6 +32,7 @@ class _SAODashboardState extends State<SAODashboard>
       vp.loadAllUsers();
       vp.loadNotifications();
       vp.loadPendingDismissals();
+      vp.loadDismissedStudents();
     });
   }
 
@@ -116,76 +117,75 @@ Widget _buildDismissTab() {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Pending Dismissal ──
-              _buildSectionCard(
-                title: '⚠️ Pending Dismissal',
-                child: vp.pendingDismissals.isEmpty
-                    ? _emptyState('No students pending dismissal')
-                    : Column(
-                        children: vp.pendingDismissals.map((a) => Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _red.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: _red.withOpacity(0.25)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${a['first_name']} ${a['last_name']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      a['student_no'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.black45,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.black38,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => _dismissStudent(a['student_no'], vp),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _red,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Dismiss', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton(
-                                onPressed: () => _cancelDismiss(a['student_no'], vp),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.green,
-                                  side: const BorderSide(color: Colors.green),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                              ),
-                            ],
-                          ),
-                        )).toList(),
+_buildSectionCard(
+  title: '⚠️ Pending Dismissal',
+  child: vp.pendingDismissals.isEmpty
+      ? _emptyState('No students pending dismissal')
+      : Column(
+          children: vp.pendingDismissals.map((a) => Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _red.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _red.withOpacity(0.25)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${a['firstName']} ${a['lastName']}',  // ✅ fixed
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
                       ),
-              ),
-              const SizedBox(height: 16),
+                      Text(
+                        a['studentNo'] ?? '',  // ✅ fixed
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black45,
+                        ),
+                      ),
+                      Text(
+                        '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black38,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => _dismissStudent(a['studentNo'], vp),  // ✅ fixed
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _red,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Dismiss', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => _cancelDismiss(a['studentNo'], vp),  // ✅ fixed
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    side: const BorderSide(color: Colors.green),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          )).toList(),
+        ),
+),
 
               // ── Dismissed Students ──
               _buildSectionCard(
@@ -208,7 +208,7 @@ Widget _buildDismissTab() {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      '${a['first_name']} ${a['last_name']}',
+                                      '${a['firstName']} ${a['lastName']}',
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 14,
@@ -216,7 +216,7 @@ Widget _buildDismissTab() {
                                       ),
                                     ),
                                     Text(
-                                      a['student_no'] ?? '',
+                                      a['studentNo'] ?? '',
                                       style: const TextStyle(fontSize: 12, color: Colors.black45),
                                     ),
                                     Text(
@@ -227,7 +227,7 @@ Widget _buildDismissTab() {
                                 ),
                               ),
                               OutlinedButton.icon(
-                                onPressed: () => _cancelDismiss(a['student_no'], vp),
+                                onPressed: () => _cancelDismiss(a['studentNo'], vp),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.green,
                                   side: const BorderSide(color: Colors.green),

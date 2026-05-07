@@ -64,45 +64,42 @@ class DatabaseService {
   // ── AUTH ─────────────────────────────────────────────────────────────────────
 
   // POST /api/auth/login
-  static Future<User?> login(String username, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        await _saveToken(data['token']);
-        await _saveStudentNo('');
+  static Future<Map<String, dynamic>?> login(String username, String password) async {
+  try {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/auth/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'password': password}),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['status'] == 200) {
+      await _saveToken(data['token']);
+      await _saveStudentNo('');
+      await _saveTokenToBackend();
 
-        // Save FCM token right after login
-        await _saveTokenToBackend();
+      final decodedToken = _decodeJwt(data['token']);
+      final name = decodedToken['name']?.toString() ?? username;
+      final id = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '';
+      final studentNo = decodedToken['studentNo']?.toString() ?? '';
+      final roleStr = (data['role'] as String).toLowerCase();
 
-        final decodedToken = _decodeJwt(data['token']);
-        final name = decodedToken['name']?.toString() ?? username;
-        final id =
-            decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
-                ?.toString() ??
-            '';
-
-        final studentNo = decodedToken['studentNo']?.toString() ?? '';
-
-        final roleStr = (data['role'] as String).toLowerCase();
-        return User(
+      return {
+        'user': User(
           id: id,
           username: username,
           password: '',
           name: name,
           role: _parseRole(roleStr),
           studentNo: studentNo,
-        );
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Login failed: $e');
+        )
+      };
     }
+    // return the API's actual message
+    return {'error': data['message'] ?? 'Invalid username or password'};
+  } catch (e) {
+    throw Exception('Login failed: $e');
   }
+}
 
   static Map<String, dynamic> _decodeJwt(String token) {
     final parts = token.split('.');
@@ -890,6 +887,7 @@ class DatabaseService {
         Uri.parse('$_baseUrl/api/sao/students/pending-dismissal'),
         headers: headers,
       );
+      
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         // handle both wrapped and unwrapped responses
