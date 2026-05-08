@@ -4,6 +4,9 @@ import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
 import 'notifications_screen.dart';
 import 'dart:async';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -346,7 +349,34 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
             ),
             child: Row(
               children: [
-                const Icon(Icons.person_rounded, color: _navy, size: 20),
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: _navy.withOpacity(0.1),
+                  backgroundImage:
+                      (report['profile_photo'] != null &&
+                          report['profile_photo'].toString().isNotEmpty)
+                      ? MemoryImage(
+                          base64Decode(
+                            report['profile_photo']
+                                .toString()
+                                .replaceAll('\n', '')
+                                .replaceAll('\r', '')
+                                .trim(),
+                          ),
+                        )
+                      : null,
+                  child:
+                      (report['profile_photo'] == null ||
+                          report['profile_photo'].toString().isEmpty)
+                      ? Text(
+                          (report['name'] ?? 'S')[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: _navy,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -483,10 +513,30 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
           CircleAvatar(
             radius: 20,
             backgroundColor: _navy.withOpacity(0.1),
-            child: Text(
-              student.name.isNotEmpty ? student.name[0].toUpperCase() : 'S',
-              style: const TextStyle(color: _navy, fontWeight: FontWeight.w700),
-            ),
+            backgroundImage:
+                (student.profilePhoto != null &&
+                    student.profilePhoto!.isNotEmpty)
+                ? MemoryImage(
+                    base64Decode(
+                      student.profilePhoto!
+                          .replaceAll('\n', '')
+                          .replaceAll('\r', '')
+                          .trim(),
+                    ),
+                  )
+                : null,
+            child:
+                (student.profilePhoto == null || student.profilePhoto!.isEmpty)
+                ? Text(
+                    student.name.isNotEmpty
+                        ? student.name[0].toUpperCase()
+                        : 'S',
+                    style: const TextStyle(
+                      color: _navy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1080,28 +1130,28 @@ class _GuidanceDashboardState extends State<GuidanceDashboard>
 
   // Actions
   Future<void> _searchReport() async {
-  final input = _searchController.text.trim();
-  if (input.isEmpty) {
-    _showSnack('Enter a StudentNo or Name to search', isError: true);
-    return;
-  }
-  final vp = Provider.of<ViolationProvider>(context, listen: false);
+    final input = _searchController.text.trim();
+    if (input.isEmpty) {
+      _showSnack('Enter a StudentNo or Name to search', isError: true);
+      return;
+    }
+    final vp = Provider.of<ViolationProvider>(context, listen: false);
 
-  String studentNo = input;
-  final match = vp.students.where(
-    (s) => s.name.toLowerCase().contains(input.toLowerCase())
-  ).firstOrNull;
-  if (match != null) {
-    studentNo = match.studentNo ?? input;
-  }
+    String studentNo = input;
+    final match = vp.students
+        .where((s) => s.name.toLowerCase().contains(input.toLowerCase()))
+        .firstOrNull;
+    if (match != null) {
+      studentNo = match.studentNo ?? input;
+    }
 
-  final result = await vp.getGuidanceStudentReport(studentNo);
-  if (result != null) {
-    setState(() => _studentReport = result);
-  } else {
-    _showSnack('Student not found', isError: true);
+    final result = await vp.getGuidanceStudentReport(studentNo);
+    if (result != null) {
+      setState(() => _studentReport = result);
+    } else {
+      _showSnack('Student not found', isError: true);
+    }
   }
-}
 
   Future<void> _warnStudent(String? studentNo) async {
     if (studentNo == null) return;

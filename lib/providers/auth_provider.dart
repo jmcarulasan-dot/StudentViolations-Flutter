@@ -14,28 +14,28 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   //LOGIN
- Future<void> login(String username, String password) async {
-  _setLoading(true);
-  _error = null;
+  Future<void> login(String username, String password) async {
+    _setLoading(true);
+    _error = null;
 
-  try {
-    final result = await DatabaseService.login(username, password);
+    try {
+      final result = await DatabaseService.login(username, password);
 
-    if (result != null && result['user'] != null) {
-      _currentUser = result['user'] as User;
-      await _saveSession(_currentUser!);
+      if (result != null && result['user'] != null) {
+        _currentUser = result['user'] as User;
+        await _saveSession(_currentUser!);
+        notifyListeners();
+      } else {
+        _error = result?['error'] ?? 'Invalid username or password';
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Login failed: ${e.toString()}';
       notifyListeners();
-    } else {
-      _error = result?['error'] ?? 'Invalid username or password';
-      notifyListeners();
+    } finally {
+      _setLoading(false);
     }
-  } catch (e) {
-    _error = 'Login failed: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
   }
-}
 
   // REGISTER
   Future<void> register({

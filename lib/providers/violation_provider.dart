@@ -26,6 +26,7 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> _violationSummary = {};
   Map<String, dynamic> _saoSummary = {};
   Map<String, dynamic> _studentReport = {};
+  Map<String, dynamic> _guardProfile = {};
 
   // Getters
   List<Violation> get violations => _violations;
@@ -45,10 +46,11 @@ class ViolationProvider with ChangeNotifier {
   Map<String, dynamic> get violationSummary => _violationSummary;
   Map<String, dynamic> get saoSummary => _saoSummary;
   Map<String, dynamic> get studentReport => _studentReport;
+  Map<String, dynamic> get guardProfile => _guardProfile;
   List<Map<String, dynamic>> _pendingDismissals = [];
   List<Map<String, dynamic>> get pendingDismissals => _pendingDismissals;
   List<Map<String, dynamic>> _dismissedStudents = [];
- List<Map<String, dynamic>> get dismissedStudents => _dismissedStudents;
+  List<Map<String, dynamic>> get dismissedStudents => _dismissedStudents;
 
   //STUDENTS METHOD
   // GET /api/student/violations
@@ -98,6 +100,20 @@ class ViolationProvider with ChangeNotifier {
       return null;
     } catch (e) {
       return 'Upload failed. Try again.';
+    }
+  }
+
+  Future<void> loadGuardProfile() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _guardProfile = await DatabaseService.getMyProfile();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load profile: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -582,20 +598,21 @@ class ViolationProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
   // GET /api/sao/students/dismissed
-Future<void> loadDismissedStudents() async {
-  _setLoading(true);
-  _error = null;
-  try {
-    _dismissedStudents = await DatabaseService.getDismissedStudents();
-    notifyListeners();
-  } catch (e) {
-    _error = 'Failed to load dismissed students: ${e.toString()}';
-    notifyListeners();
-  } finally {
-    _setLoading(false);
+  Future<void> loadDismissedStudents() async {
+    _setLoading(true);
+    _error = null;
+    try {
+      _dismissedStudents = await DatabaseService.getDismissedStudents();
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load dismissed students: ${e.toString()}';
+      notifyListeners();
+    } finally {
+      _setLoading(false);
+    }
   }
-}
 
   // PUT /api/guidance/students/{studentNo}/recommend-dismiss
   Future<void> recommendDismiss(String studentNo) async {

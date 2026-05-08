@@ -5,6 +5,9 @@ import '../providers/violation_provider.dart';
 import '../models/violation.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'notifications_screen.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -56,6 +59,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
       final vp = Provider.of<ViolationProvider>(context, listen: false);
       vp.loadStudents();
       vp.loadNotifications();
+      vp.loadGuardProfile();
     });
   }
 
@@ -554,14 +558,31 @@ class _GuardDashboardState extends State<GuardDashboard> {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: color.withOpacity(0.15),
-                  child: Text(
-                    (data['name'] ?? 'S')[0].toUpperCase(),
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
+                  backgroundImage:
+                      (data['profile_photo'] != null &&
+                          data['profile_photo'].toString().isNotEmpty)
+                      ? MemoryImage(
+                          base64Decode(
+                            data['profile_photo']
+                                .toString()
+                                .replaceAll('\n', '')
+                                .replaceAll('\r', '')
+                                .trim(),
+                          ),
+                        )
+                      : null,
+                  child:
+                      (data['profile_photo'] == null ||
+                          data['profile_photo'].toString().isEmpty)
+                      ? Text(
+                          (data['name'] ?? 'S')[0].toUpperCase(),
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -962,15 +983,31 @@ class _GuardDashboardState extends State<GuardDashboard> {
                               CircleAvatar(
                                 radius: 20,
                                 backgroundColor: _navy.withOpacity(0.1),
-                                child: Text(
-                                  s.name.isNotEmpty
-                                      ? s.name[0].toUpperCase()
-                                      : 'S',
-                                  style: const TextStyle(
-                                    color: _navy,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                                backgroundImage:
+                                    (s.profilePhoto != null &&
+                                        s.profilePhoto!.isNotEmpty)
+                                    ? MemoryImage(
+                                        base64Decode(
+                                          s.profilePhoto!
+                                              .replaceAll('\n', '')
+                                              .replaceAll('\r', '')
+                                              .trim(),
+                                        ),
+                                      )
+                                    : null,
+                                child:
+                                    (s.profilePhoto == null ||
+                                        s.profilePhoto!.isEmpty)
+                                    ? Text(
+                                        s.name.isNotEmpty
+                                            ? s.name[0].toUpperCase()
+                                            : 'S',
+                                        style: const TextStyle(
+                                          color: _navy,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      )
+                                    : null,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1107,6 +1144,27 @@ class _GuardDashboardState extends State<GuardDashboard> {
     if (picked != null) {
       controller.text =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 60,
+      maxWidth: 600,
+    );
+    if (picked == null) return;
+    final vp = Provider.of<ViolationProvider>(context, listen: false);
+    final error = await vp.uploadProfilePhoto(File(picked.path));
+    await vp.loadGuardProfile();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error ?? 'Profile photo updated!'),
+          backgroundColor: error != null ? _red : Colors.green,
+        ),
+      );
     }
   }
 

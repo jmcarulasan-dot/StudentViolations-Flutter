@@ -43,6 +43,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     {'label': 'BSIT', 'value': 'BSIT'},
     {'label': 'BSHM', 'value': 'BSHM'},
     {'label': 'BSBA', 'value': 'BSBA'},
+    {'label': 'BSCS', 'value': 'BSCS'},
+    {'label': 'BSA', 'value': 'BSA'},
   ];
 
   final List<Map<String, String>> _genders = [

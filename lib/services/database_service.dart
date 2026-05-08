@@ -64,42 +64,48 @@ class DatabaseService {
   // ── AUTH ─────────────────────────────────────────────────────────────────────
 
   // POST /api/auth/login
-  static Future<Map<String, dynamic>?> login(String username, String password) async {
-  try {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/api/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200 && data['status'] == 200) {
-      await _saveToken(data['token']);
-      await _saveStudentNo('');
-      await _saveTokenToBackend();
+  static Future<Map<String, dynamic>?> login(
+    String username,
+    String password,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['status'] == 200) {
+        await _saveToken(data['token']);
+        await _saveStudentNo('');
+        await _saveTokenToBackend();
 
-      final decodedToken = _decodeJwt(data['token']);
-      final name = decodedToken['name']?.toString() ?? username;
-      final id = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '';
-      final studentNo = decodedToken['studentNo']?.toString() ?? '';
-      final roleStr = (data['role'] as String).toLowerCase();
+        final decodedToken = _decodeJwt(data['token']);
+        final name = decodedToken['name']?.toString() ?? username;
+        final id =
+            decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+                ?.toString() ??
+            '';
+        final studentNo = decodedToken['studentNo']?.toString() ?? '';
+        final roleStr = (data['role'] as String).toLowerCase();
 
-      return {
-        'user': User(
-          id: id,
-          username: username,
-          password: '',
-          name: name,
-          role: _parseRole(roleStr),
-          studentNo: studentNo,
-        )
-      };
+        return {
+          'user': User(
+            id: id,
+            username: username,
+            password: '',
+            name: name,
+            role: _parseRole(roleStr),
+            studentNo: studentNo,
+          ),
+        };
+      }
+      // return the API's actual message
+      return {'error': data['message'] ?? 'Invalid username or password'};
+    } catch (e) {
+      throw Exception('Login failed: $e');
     }
-    // return the API's actual message
-    return {'error': data['message'] ?? 'Invalid username or password'};
-  } catch (e) {
-    throw Exception('Login failed: $e');
   }
-}
 
   static Map<String, dynamic> _decodeJwt(String token) {
     final parts = token.split('.');
@@ -331,6 +337,7 @@ class DatabaseService {
           'violation_count': d['violation_count'],
           'warning_level': d['warning_level'],
           'violations': d['violations'] ?? [],
+          'profile_photo': d['profile_photo'] ?? '',
         };
       }
       return null;
@@ -424,6 +431,7 @@ class DatabaseService {
                 role: UserRole.student,
                 gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
                 studentNo: s['student_no'] ?? '',
+                profilePhoto: s['profile_photo'] ?? '',
               ),
             )
             .toList();
@@ -508,6 +516,7 @@ class DatabaseService {
                 role: UserRole.student,
                 gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
                 studentNo: s['student_no'] ?? '',
+                profilePhoto: s['profile_photo'] ?? '',
               ),
             )
             .toList();
@@ -887,7 +896,7 @@ class DatabaseService {
         Uri.parse('$_baseUrl/api/sao/students/pending-dismissal'),
         headers: headers,
       );
-      
+
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         // handle both wrapped and unwrapped responses
@@ -904,27 +913,26 @@ class DatabaseService {
   }
 
   // GET /api/sao/students/dismissed
-static Future<List<Map<String, dynamic>>> getDismissedStudents() async {
-  try {
-    final headers = await _authHeaders();
-    final response = await http.get(
-      Uri.parse('$_baseUrl/api/sao/students/dismissed'),
-      headers: headers,
-    );
-    final data = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
-      } else if (data['data'] != null) {
-        return List<Map<String, dynamic>>.from(data['data']);
+  static Future<List<Map<String, dynamic>>> getDismissedStudents() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/sao/students/dismissed'),
+        headers: headers,
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        if (data is List) {
+          return List<Map<String, dynamic>>.from(data);
+        } else if (data['data'] != null) {
+          return List<Map<String, dynamic>>.from(data['data']);
+        }
       }
+      return [];
+    } catch (e) {
+      return [];
     }
-    return [];
-  } catch (e) {
-    return [];
   }
-}
-
 
   // GET /api/sao/users
   static Future<List<User>> getAllUsers() async {
@@ -948,6 +956,7 @@ static Future<List<Map<String, dynamic>>> getDismissedStudents() async {
                 contactNumber: u['contact_number'],
                 gradeSection: '${u['course'] ?? ''} - ${u['year'] ?? ''}',
                 studentNo: u['student_no'] ?? '',
+                profilePhoto: u['profile_photo'] ?? '',
               ),
             )
             .toList();

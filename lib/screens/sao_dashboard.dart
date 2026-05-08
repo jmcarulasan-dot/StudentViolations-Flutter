@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
 import 'notifications_screen.dart';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 const _red = Color(0xFFFD070C);
 const _navy = Color(0xFF0F136E);
@@ -101,154 +104,297 @@ class _SAODashboardState extends State<SAODashboard>
       ),
     );
   }
+
   // ── Dismiss Tab ──────────────────────────────────────────────────────────────
-Widget _buildDismissTab() {
-  return Consumer<ViolationProvider>(
-    builder: (context, vp, _) {
-      return RefreshIndicator(
-        onRefresh: () async {
-          await vp.loadPendingDismissals();
-          await vp.loadDismissedStudents();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Pending Dismissal ──
-_buildSectionCard(
-  title: '⚠️ Pending Dismissal',
-  child: vp.pendingDismissals.isEmpty
-      ? _emptyState('No students pending dismissal')
-      : Column(
-          children: vp.pendingDismissals.map((a) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _red.withOpacity(0.04),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _red.withOpacity(0.25)),
-            ),
-            child: Row(
+  Widget _buildDismissTab() {
+    return Consumer<ViolationProvider>(
+      builder: (context, vp, _) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            await vp.loadPendingDismissals();
+            await vp.loadDismissedStudents();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${a['firstName']} ${a['lastName']}',  // ✅ fixed
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: Colors.black87,
+                // ── Pending Dismissal ──
+                _buildSectionCard(
+                  title: '⚠️ Pending Dismissal',
+                  child: vp.pendingDismissals.isEmpty
+                      ? _emptyState('No students pending dismissal')
+                      : Column(
+                          children: vp.pendingDismissals
+                              .map(
+                                (a) => Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: _red.withOpacity(0.04),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: _red.withOpacity(0.25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: _red.withOpacity(0.1),
+                                        backgroundImage:
+                                            (a['profilePhoto'] != null &&
+                                                a['profilePhoto']
+                                                    .toString()
+                                                    .isNotEmpty)
+                                            ? MemoryImage(
+                                                base64Decode(
+                                                  a['profilePhoto']
+                                                      .toString()
+                                                      .replaceAll('\n', '')
+                                                      .replaceAll('\r', '')
+                                                      .trim(),
+                                                ),
+                                              )
+                                            : null,
+                                        child:
+                                            (a['profilePhoto'] == null ||
+                                                a['profilePhoto']
+                                                    .toString()
+                                                    .isEmpty)
+                                            ? Text(
+                                                '${a['firstName'] ?? 'S'}'[0]
+                                                    .toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: _red,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${a['firstName']} ${a['lastName']}', // ✅ fixed
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Text(
+                                              a['studentNo'] ?? '', // ✅ fixed
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.black45,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.black38,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () => _dismissStudent(
+                                          a['studentNo'],
+                                          vp,
+                                        ), // ✅ fixed
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: _red,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Dismiss',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      OutlinedButton(
+                                        onPressed: () => _cancelDismiss(
+                                          a['studentNo'],
+                                          vp,
+                                        ), // ✅ fixed
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.green,
+                                          side: const BorderSide(
+                                            color: Colors.green,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Cancel',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
-                      ),
-                      Text(
-                        a['studentNo'] ?? '',  // ✅ fixed
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black45,
-                        ),
-                      ),
-                      Text(
-                        '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black38,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
-                ElevatedButton(
-                  onPressed: () => _dismissStudent(a['studentNo'], vp),  // ✅ fixed
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _red,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Dismiss', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () => _cancelDismiss(a['studentNo'], vp),  // ✅ fixed
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.green,
-                    side: const BorderSide(color: Colors.green),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+
+                // ── Dismissed Students ──
+                _buildSectionCard(
+                  title: '🚫 Dismissed Students',
+                  child: vp.dismissedStudents.isEmpty
+                      ? _emptyState('No dismissed students')
+                      : Column(
+                          children: vp.dismissedStudents
+                              .map(
+                                (a) => Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.04),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.25),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: Colors.grey
+                                            .withOpacity(0.1),
+                                        backgroundImage:
+                                            (a['profilePhoto'] != null &&
+                                                a['profilePhoto']
+                                                    .toString()
+                                                    .isNotEmpty)
+                                            ? MemoryImage(
+                                                base64Decode(
+                                                  a['profilePhoto']
+                                                      .toString()
+                                                      .replaceAll('\n', '')
+                                                      .replaceAll('\r', '')
+                                                      .trim(),
+                                                ),
+                                              )
+                                            : null,
+                                        child:
+                                            (a['profilePhoto'] == null ||
+                                                a['profilePhoto']
+                                                    .toString()
+                                                    .isEmpty)
+                                            ? Text(
+                                                '${a['firstName'] ?? 'S'}'[0]
+                                                    .toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${a['firstName']} ${a['lastName']}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            Text(
+                                              a['studentNo'] ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.black45,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.black38,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      OutlinedButton.icon(
+                                        onPressed: () =>
+                                            _cancelDismiss(a['studentNo'], vp),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.green,
+                                          side: const BorderSide(
+                                            color: Colors.green,
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 8,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                        ),
+                                        icon: const Icon(
+                                          Icons.restore_rounded,
+                                          size: 14,
+                                        ),
+                                        label: const Text(
+                                          'Restore',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
                 ),
               ],
             ),
-          )).toList(),
-        ),
-),
-
-              // ── Dismissed Students ──
-              _buildSectionCard(
-                title: '🚫 Dismissed Students',
-                child: vp.dismissedStudents.isEmpty
-                    ? _emptyState('No dismissed students')
-                    : Column(
-                        children: vp.dismissedStudents.map((a) => Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.withOpacity(0.25)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${a['firstName']} ${a['lastName']}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    Text(
-                                      a['studentNo'] ?? '',
-                                      style: const TextStyle(fontSize: 12, color: Colors.black45),
-                                    ),
-                                    Text(
-                                      '${a['course'] ?? ''} • Year ${a['year'] ?? ''}',
-                                      style: const TextStyle(fontSize: 11, color: Colors.black38),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () => _cancelDismiss(a['studentNo'], vp),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.green,
-                                  side: const BorderSide(color: Colors.green),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                icon: const Icon(Icons.restore_rounded, size: 14),
-                                label: const Text('Restore', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                              ),
-                            ],
-                          ),
-                        )).toList(),
-                      ),
-              ),
-            ],
           ),
-        ),
-      );
-    },
-  );
-}
+        );
+      },
+    );
+  }
 
   // ── Violations Tab ──────────────────────────────────────────────────────────
   Widget _buildViolationsTab(String name) {
@@ -648,7 +794,6 @@ _buildSectionCard(
                 ),
                 const SizedBox(height: 16),
 
-              
                 // Student report search
                 _buildSectionCard(
                   title: '🔍 Student Report',
@@ -723,6 +868,35 @@ _buildSectionCard(
             padding: const EdgeInsets.all(14),
             child: Row(
               children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: _navy.withOpacity(0.1),
+                  backgroundImage:
+                      (report['profile_photo'] != null &&
+                          report['profile_photo'].toString().isNotEmpty)
+                      ? MemoryImage(
+                          base64Decode(
+                            report['profile_photo']
+                                .toString()
+                                .replaceAll('\n', '')
+                                .replaceAll('\r', '')
+                                .trim(),
+                          ),
+                        )
+                      : null,
+                  child:
+                      (report['profile_photo'] == null ||
+                          report['profile_photo'].toString().isEmpty)
+                      ? Text(
+                          (report['name'] ?? 'S')[0].toUpperCase(),
+                          style: const TextStyle(
+                            color: _navy,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -756,7 +930,6 @@ _buildSectionCard(
               ],
             ),
           ),
-
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
             child: Row(
@@ -958,46 +1131,66 @@ _buildSectionCard(
   }
 
   Widget _userTile(user, ViolationProvider vp) {
-  final roleDisplay = _roleLabel(user.role.toString().split('.').last);
-  final roleColor = _roleColor(roleDisplay);
+    final roleDisplay = _roleLabel(user.role.toString().split('.').last);
+    final roleColor = _roleColor(roleDisplay);
 
-  return Column(
-    children: [
-      ListTile(
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: roleColor.withOpacity(0.12),
-          child: Text(
-            user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
-            style: TextStyle(color: roleColor, fontWeight: FontWeight.w700),
+    return Column(
+      children: [
+        ListTile(
+          leading: CircleAvatar(
+            radius: 20,
+            backgroundColor: roleColor.withOpacity(0.12),
+            backgroundImage:
+                (user.profilePhoto != null && user.profilePhoto!.isNotEmpty)
+                ? MemoryImage(
+                    base64Decode(
+                      user.profilePhoto!
+                          .replaceAll('\n', '')
+                          .replaceAll('\r', '')
+                          .trim(),
+                    ),
+                  )
+                : null,
+            child: (user.profilePhoto == null || user.profilePhoto!.isEmpty)
+                ? Text(
+                    user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                    style: TextStyle(
+                      color: roleColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : null,
+          ),
+          title: Text(
+            user.name,
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+          ),
+          subtitle: Text(
+            '@${user.username} • ${roleDisplay.toUpperCase()}',
+            style: const TextStyle(fontSize: 12, color: Colors.black45),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.edit_rounded, color: _navy, size: 20),
+                onPressed: () => _showEditUserDialog(user, vp),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.delete_rounded,
+                  color: Colors.grey.shade400,
+                  size: 20,
+                ),
+                onPressed: () => _deleteUser(user.id, vp),
+              ),
+            ],
           ),
         ),
-        title: Text(
-          user.name,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-        ),
-        subtitle: Text(
-          '@${user.username} • ${roleDisplay.toUpperCase()}',
-          style: const TextStyle(fontSize: 12, color: Colors.black45),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: Icon(Icons.edit_rounded, color: _navy, size: 20),
-              onPressed: () => _showEditUserDialog(user, vp),
-            ),
-            IconButton(
-              icon: Icon(Icons.delete_rounded, color: Colors.grey.shade400, size: 20),
-              onPressed: () => _deleteUser(user.id, vp),
-            ),
-          ],
-        ),
-      ),
-      const Divider(height: 1, indent: 56),
-    ],
-  );
-}
+        const Divider(height: 1, indent: 56),
+      ],
+    );
+  }
 
   String _roleLabel(String role) {
     switch (role.toLowerCase()) {
@@ -1084,7 +1277,7 @@ _buildSectionCard(
     }
   }
 
- Future<void> _deleteUser(String id, ViolationProvider vp) async {
+  Future<void> _deleteUser(String id, ViolationProvider vp) async {
     final confirm = await _showConfirmDialog(
       'Delete User',
       'This cannot be undone.',
@@ -1098,46 +1291,80 @@ _buildSectionCard(
   }
 
   void _showEditUserDialog(user, ViolationProvider vp) {
-    final firstNameController = TextEditingController(text: user.name.split(' ').first);
-    final lastNameController = TextEditingController(text: user.name.split(' ').last);
+    final firstNameController = TextEditingController(
+      text: user.name.split(' ').first,
+    );
+    final lastNameController = TextEditingController(
+      text: user.name.split(' ').last,
+    );
     final emailController = TextEditingController();
-    final contactController = TextEditingController(text: user.contactNumber ?? '');
+    final contactController = TextEditingController(
+      text: user.contactNumber ?? '',
+    );
 
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit User', style: TextStyle(color: _navy, fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Edit User',
+          style: TextStyle(color: _navy, fontWeight: FontWeight.w700),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: firstNameController, decoration: _inputDeco('First Name', Icons.person_rounded)),
+              TextField(
+                controller: firstNameController,
+                decoration: _inputDeco('First Name', Icons.person_rounded),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: lastNameController, decoration: _inputDeco('Last Name', Icons.person_rounded)),
+              TextField(
+                controller: lastNameController,
+                decoration: _inputDeco('Last Name', Icons.person_rounded),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: emailController, decoration: _inputDeco('Email', Icons.email_rounded)),
+              TextField(
+                controller: emailController,
+                decoration: _inputDeco('Email', Icons.email_rounded),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: contactController, decoration: _inputDeco('Contact Number', Icons.phone_rounded)),
+              TextField(
+                controller: contactController,
+                decoration: _inputDeco('Contact Number', Icons.phone_rounded),
+              ),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () async {
               await vp.updateUser(user.id, {
                 'firstName': firstNameController.text.trim(),
                 'lastName': lastNameController.text.trim(),
-                if (emailController.text.trim().isNotEmpty) 'email': emailController.text.trim(),
-                if (contactController.text.trim().isNotEmpty) 'contactNumber': contactController.text.trim(),
+                if (emailController.text.trim().isNotEmpty)
+                  'email': emailController.text.trim(),
+                if (contactController.text.trim().isNotEmpty)
+                  'contactNumber': contactController.text.trim(),
               });
               if (mounted) {
                 Navigator.of(dialogContext).pop();
-                _showSnack(vp.error == null ? 'User updated' : vp.error!, isError: vp.error != null);
+                _showSnack(
+                  vp.error == null ? 'User updated' : vp.error!,
+                  isError: vp.error != null,
+                );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _navy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _navy,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: const Text('Save'),
           ),
         ],

@@ -11,6 +11,7 @@ class User {
   final String? studentNo;
   final String? token;
   final String? status;
+  final String? profilePhoto;
   User({
     required this.id,
     required this.username,
@@ -22,6 +23,7 @@ class User {
     this.studentNo,
     this.token,
     this.status,
+    this.profilePhoto,
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +36,7 @@ class User {
       'gradeSection': gradeSection,
       'contactNumber': contactNumber,
       'studentNo': studentNo,
+      'profilePhoto': profilePhoto,
     };
   }
 
@@ -48,6 +51,7 @@ class User {
       contactNumber: map['contactNumber'],
       studentNo: map['studentNo'],
       status: map['status'],
+      profilePhoto: map['profilePhoto'],
     );
   }
 }
