@@ -493,9 +493,6 @@ class DatabaseService {
     }
   }
 
-  // ── GUIDANCE ENDPOINTS ───────────────────────────────────────────────────────
-
-  // GET /api/guidance/students
   static Future<List<User>> getGuidanceStudents() async {
     try {
       final headers = await _authHeaders();
@@ -616,20 +613,6 @@ class DatabaseService {
   }
 
   // PUT /api/guidance/students/{studentNo}/warn
-  static Future<bool> warnStudent(String studentNo) async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.put(
-        Uri.parse('$_baseUrl/api/guidance/students/$studentNo/warn'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      return response.statusCode == 200 && data['status'] == 200;
-    } catch (e) {
-      throw Exception('Failed to warn student: $e');
-    }
-  }
-
   // PUT /api/guidance/students/{studentNo}/recommend-dismiss
   static Future<bool> recommendDismiss(String studentNo) async {
     try {
@@ -1094,10 +1077,7 @@ class DatabaseService {
       case 'student':
         return UserRole.student;
       case 'sao':
-        return UserRole.sao;
-      case 'guidance':
-        return UserRole.guidance;
-      default:
+        return UserRole.sao;      default:
         return UserRole.student;
     }
   }
@@ -1154,9 +1134,6 @@ class DatabaseService {
       await rejectViolation(violationId);
     }
   }
-
-  static Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) =>
-      getGuidanceStudentReport(studentNo);
 
   // These are kept as no-ops — they are not used by any active UI
   static Future<void> resolveViolation(String violationId) async {}
