@@ -24,7 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _studentNoController = TextEditingController();
   final _addressController = TextEditingController();
 
-  UserRole? _selectedRole;
+  UserRole _selectedRole = UserRole.student;
   String? _selectedYear;
   String? _selectedCourse;
   String? _selectedGender;
@@ -182,79 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Role
-                            _sectionLabel('Select Role'),
-                            const SizedBox(height: 10),
-                            DropdownButtonFormField<UserRole>(
-                              value: _selectedRole,
-                              decoration: _dropdownDecoration(
-                                'Role',
-                                Icons.badge_rounded,
-                              ),
-                              hint: const Text('Select your role'),
-                              items: UserRole.values.map((role) {
-                                return DropdownMenuItem(
-                                  value: role,
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        _getRoleIcon(role),
-                                        size: 18,
-                                        color: _navy,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        _getRoleDisplayName(role),
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (value) =>
-                                  setState(() => _selectedRole = value),
-                              validator: (v) =>
-                                  v == null ? 'Please select a role' : null,
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Personal Information
-                            _sectionLabel('Personal Information'),
-                            const SizedBox(height: 10),
-
-                            _buildTextField(
-                              controller: _nameController,
-                              label: 'Full Name',
-                              icon: Icons.person_outline_rounded,
-                              validator: (v) {
-                                if (v == null || v.isEmpty)
-                                  return 'Please enter your full name';
-                                if (v.length < 3)
-                                  return 'Name must be at least 3 characters';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
-
-                            _buildTextField(
-                              controller: _emailController,
-                              label: 'Email Address',
-                              icon: Icons.email_outlined,
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (v) {
-                                if (v == null || v.isEmpty)
-                                  return 'Please enter your email';
-                                if (!RegExp(
-                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                ).hasMatch(v))
-                                  return 'Please enter a valid email address';
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 16),
 
                             // Gender — required for ALL roles
                             DropdownButtonFormField<String>(
@@ -627,7 +554,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() async {
-    if (_formKey.currentState!.validate() && _selectedRole != null) {
+    if (_formKey.currentState!.validate() ) {
       // Extra check for date of birth since it's not a TextFormField
       if (_selectedDateOfBirth == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -679,7 +606,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _studentNoController.clear();
           _addressController.clear();
           setState(() {
-            _selectedRole = null;
+            _selectedRole = UserRole.student;
             _selectedYear = null;
             _selectedCourse = null;
             _selectedGender = null;
