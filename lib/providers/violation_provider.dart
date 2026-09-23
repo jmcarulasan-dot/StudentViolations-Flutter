@@ -490,28 +490,6 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // PUT /api/sao/violations/{id}/appeal/review
-  Future<void> guidanceReviewAppeal(
-    String violationId,
-    String appealStatus,
-    String appealRemarks,
-  ) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      await DatabaseService.guidanceReviewAppeal(
-        violationId,
-        appealStatus,
-        appealRemarks,
-      );
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to review appeal: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
 
   // PUT /api/sao/violations/{id}/appeal/review
   Future<void> saoReviewAppeal(
