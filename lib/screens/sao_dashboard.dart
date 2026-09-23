@@ -1198,8 +1198,6 @@ class _SAODashboardState extends State<SAODashboard>
         return 'SAO';
       case 'guard':
         return 'Guard';
-      case 'guidance':
-        return 'Guidance';
       default:
         return role;
     }
@@ -1788,8 +1786,6 @@ class _SAODashboardState extends State<SAODashboard>
     switch (role.toLowerCase()) {
       case 'guard':
         return Colors.blue;
-      case 'guidance':
-        return Colors.teal;
       case 'sao':
         return _red;
       default:
