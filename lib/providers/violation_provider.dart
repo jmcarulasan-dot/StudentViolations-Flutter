@@ -260,7 +260,6 @@ class ViolationProvider with ChangeNotifier {
 
   // GUIDANCE METHODS
 
-  // GET /api/guidance/students
   // Load all students
   Future<void> loadGuidanceStudents() async {
     _setLoading(true);
@@ -344,7 +343,6 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // GET /api/guidance/students/{studentNo}/report
   Future<Map<String, dynamic>?> getGuidanceStudentReport(
     String studentNo,
   ) async {
@@ -570,7 +568,6 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // PUT /api/guidance/students/{studentNo}/warn
   Future<void> warnStudent(String studentNo) async {
     _setLoading(true);
     _error = null;
