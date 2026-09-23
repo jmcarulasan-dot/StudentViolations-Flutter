@@ -451,25 +451,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
                 ),
                 const SizedBox(height: 12),
 
-                DropdownButtonFormField<String>(
-                  value: _selectedSeverity,
-                  decoration: _inputDeco('Severity *', Icons.speed_rounded),
-                  items: _severities
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s,
-                          child: Text(
-                            s.toUpperCase(),
-                            style: const TextStyle(fontSize: 13),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedSeverity = v ?? 'minor'),
-                ),
-                const SizedBox(height: 12),
-
                 TextFormField(
                   controller: _remarksController,
                   maxLines: 2,
@@ -1087,7 +1068,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
       await _loadScannedStudent(_scannedStudentNo!, vp);
       setState(() {
         _selectedViolationType = null;
-        _selectedSeverity = 'minor';
         _remarksController.clear();
       });
     } else {
