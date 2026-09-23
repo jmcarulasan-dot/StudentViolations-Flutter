@@ -480,9 +480,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   width: double.infinity,
                                   height: 50,
                                   child: ElevatedButton(
-                                    onPressed: _selectedRole == null
-                                        ? null
-                                        : _register,
+                                    onPressed: _register,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: _navy,
                                       disabledBackgroundColor:
@@ -577,7 +575,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: _usernameController.text.trim(),
         password: _passwordController.text,
         name: _nameController.text.trim(),
-        role: _selectedRole!,
+        role: _selectedRole,
         email: _emailController.text.trim(),
         address: _addressController.text.trim(),
         gender: _selectedGender!,
