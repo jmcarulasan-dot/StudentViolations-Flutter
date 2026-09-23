@@ -494,73 +494,6 @@ class DatabaseService {
   }
 
   // GET /api/sao/students/{studentNo}/report
-  // SAO violation endpoints
-  static Future<List<Violation>> getAllViolations() async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/violations/by-status'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        final List groups = data['data'];
-        final allViolations = <Violation>[];
-        for (final group in groups) {
-          final List violations = group['violations'] ?? [];
-          allViolations.addAll(_mapViolations(violations));
-        }
-        return allViolations;
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Failed to get violations: $e');
-    }
-  }
-
-  // GET /api/guidance/violations/by-status — pending only
-  static Future<List<Violation>> getGuidancePendingViolations() async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/violations/by-status'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        final List groups = data['data'];
-        for (final group in groups) {
-          if ((group['status'] ?? '').toString().toLowerCase() == 'pending') {
-            return _mapViolations(group['violations'] ?? []);
-          }
-        }
-        return [];
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Failed to get pending violations: $e');
-    }
-  }
-
-  // GET /api/guidance/violations/by-severity
-  static Future<List<Map<String, dynamic>>>
-  getGuidanceViolationsBySeverity() async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/violations/by-severity'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        final List groups = data['data'];
-        return groups.map((g) => Map<String, dynamic>.from(g)).toList();
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Failed to get violations by severity: $e');
-    }
-  }
 
   // PUT /api/sao/students/{studentNo}/recommend-dismiss
   static Future<bool> recommendDismiss(String studentNo) async {
@@ -568,7 +501,7 @@ class DatabaseService {
       final headers = await _authHeaders();
       final response = await http.put(
         Uri.parse(
-          '$_baseUrl/api/guidance/students/$studentNo/recommend-dismiss',
+          '$_baseUrl/api/sao/students/$studentNo/recommend-dismiss',
         ),
         headers: headers,
       );
