@@ -258,143 +258,7 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // GUIDANCE METHODS
-
-  // Load all students
-  Future<void> loadGuidanceStudents() async {
-    _setLoading(true);
-    _error = null;
-    try {
-      _students = await DatabaseService.getGuidanceStudents();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load students: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // GET /api/guidance/students/{studentNo}
-  // Get one specific student
-  Future<Map<String, dynamic>?> getGuidanceStudent(String studentNo) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      final result = await DatabaseService.getGuidanceStudent(studentNo);
-      notifyListeners();
-      return result;
-    } catch (e) {
-      _error = 'Failed to get student: ${e.toString()}';
-      notifyListeners();
-      return null;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // GET /api/guidance/violations
-  // Load all violations
-  Future<void> loadAllViolations() async {
-    _setLoading(true);
-    _error = null;
-    try {
-      _violations = await DatabaseService.getAllViolations();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load violations: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // PUT /api/guidance/violations/{id}/resolve
-  // Resolve a violation
-  Future<void> resolveViolation(String violationId) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      await DatabaseService.resolveViolation(violationId);
-      await loadAllViolations();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to resolve violation: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // DELETE /api/guidance/violations/{id}
-  // Delete a violation
-  Future<void> deleteGuidanceViolation(String violationId) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      await DatabaseService.deleteGuidanceViolation(violationId);
-      await loadAllViolations();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to delete violation: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  Future<Map<String, dynamic>?> getGuidanceStudentReport(
-    String studentNo,
-  ) async {
-    _setLoading(true);
-    _error = null;
-    try {
-      final result = await DatabaseService.getGuidanceStudentReport(studentNo);
-      if (result == null) _error = 'Student not found: $studentNo';
-      notifyListeners();
-      return result;
-    } catch (e) {
-      _error = 'Failed to get student report: ${e.toString()}';
-      notifyListeners();
-      return null;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // GET /api/guidance/violations/pending
-  Future<void> loadPendingViolations() async {
-    _setLoading(true);
-    _error = null;
-    try {
-      _violations = await DatabaseService.getGuidancePendingViolations();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load pending violations: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // GET /api/guidance/violations/by-severity
-  List<Map<String, dynamic>> _severityGroups = [];
-  List<Map<String, dynamic>> get severityGroups => _severityGroups;
-
-  Future<void> loadViolationsBySeverity() async {
-    _setLoading(true);
-    _error = null;
-    try {
-      _severityGroups = await DatabaseService.getGuidanceViolationsBySeverity();
-      notifyListeners();
-    } catch (e) {
-      _error = 'Failed to load violations by severity: ${e.toString()}';
-      notifyListeners();
-    } finally {
-      _setLoading(false);
-    }
-  }
-
+  // SAO METHODS
   // SAO METHODS
 
   // GET /api/sao/violations
@@ -611,7 +475,7 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // PUT /api/guidance/students/{studentNo}/recommend-dismiss
+  // PUT /api/sao/students/{studentNo}/recommend-dismiss
   Future<void> recommendDismiss(String studentNo) async {
     _setLoading(true);
     _error = null;
@@ -626,7 +490,7 @@ class ViolationProvider with ChangeNotifier {
     }
   }
 
-  // POST /api/guidance/violations/{id}/appeal/review
+  // PUT /api/sao/violations/{id}/appeal/review
   Future<void> guidanceReviewAppeal(
     String violationId,
     String appealStatus,
@@ -669,17 +533,6 @@ class ViolationProvider with ChangeNotifier {
       notifyListeners();
     } finally {
       _setLoading(false);
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> loadGuidanceAppeals() async {
-    _error = null;
-    try {
-      return await DatabaseService.getGuidanceAppeals();
-    } catch (e) {
-      _error = 'Failed to load appeals: ${e.toString()}';
-      notifyListeners();
-      return [];
     }
   }
 
