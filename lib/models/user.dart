@@ -1,4 +1,4 @@
-enum UserRole { guard, student, sao, guidance }
+enum UserRole { guard, student, sao }
 
 class User {
   final String id;
