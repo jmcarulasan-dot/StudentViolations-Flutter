@@ -832,8 +832,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return 'Student';
       case UserRole.sao:
         return 'SAO';
-      case UserRole.guidance:
-        return 'Guidance';
     }
   }
 
@@ -845,8 +843,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return Icons.school_rounded;
       case UserRole.sao:
         return Icons.admin_panel_settings_rounded;
-      case UserRole.guidance:
-        return Icons.psychology_rounded;
     }
   }
 }
