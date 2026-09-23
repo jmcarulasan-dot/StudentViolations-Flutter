@@ -5,7 +5,6 @@ enum ViolationStatus {
   warning,
   parentNotified,
   referredToSAO,
-  referredToGuidance,
   disciplinaryAction,
   cleared,
 }
@@ -95,8 +94,6 @@ class Violation {
         return 'Parent Notified';
       case ViolationStatus.referredToSAO:
         return 'Approved';
-      case ViolationStatus.referredToGuidance:
-        return 'Referred to Guidance';
       case ViolationStatus.disciplinaryAction:
         return 'Disciplinary Action';
       case ViolationStatus.cleared:
