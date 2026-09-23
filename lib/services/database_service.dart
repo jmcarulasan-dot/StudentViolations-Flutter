@@ -493,58 +493,8 @@ class DatabaseService {
     }
   }
 
-  static Future<List<User>> getGuidanceStudents() async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/students'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        final List students = data['data'];
-        return students
-            .map(
-              (s) => User(
-                id: s['student_no'] ?? '',
-                username: s['student_no'] ?? '',
-                password: '',
-                name: s['name'] ?? '',
-                role: UserRole.student,
-                gradeSection: '${s['course'] ?? ''} - ${s['year'] ?? ''}',
-                studentNo: s['student_no'] ?? '',
-                profilePhoto: s['profile_photo'] ?? '',
-              ),
-            )
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Failed to get guidance students: $e');
-    }
-  }
-
-  // GET /api/guidance/students/{studentNo}/report
-  static Future<Map<String, dynamic>?> getGuidanceStudentReport(
-    String studentNo,
-  ) async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/students/$studentNo/report'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        return Map<String, dynamic>.from(data['data']);
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Failed to get student report: $e');
-    }
-  }
-
-  // GET /api/guidance/violations/by-status — flattens all groups into one list
+  // GET /api/sao/students/{studentNo}/report
+  // SAO violation endpoints
   static Future<List<Violation>> getAllViolations() async {
     try {
       final headers = await _authHeaders();
@@ -612,8 +562,7 @@ class DatabaseService {
     }
   }
 
-  // PUT /api/guidance/students/{studentNo}/warn
-  // PUT /api/guidance/students/{studentNo}/recommend-dismiss
+  // PUT /api/sao/students/{studentNo}/recommend-dismiss
   static Future<bool> recommendDismiss(String studentNo) async {
     try {
       final headers = await _authHeaders();
@@ -627,32 +576,6 @@ class DatabaseService {
       return response.statusCode == 200 && data['status'] == 200;
     } catch (e) {
       throw Exception('Failed to recommend dismissal: $e');
-    }
-  }
-
-  // FIX: GuidanceController uses [HttpPut] — changed from http.post to http.put
-  // PUT /api/guidance/violations/{id}/appeal/review
-  static Future<bool> guidanceReviewAppeal(
-    String violationId,
-    String appealStatus,
-    String appealRemarks,
-  ) async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.put(
-        Uri.parse(
-          '$_baseUrl/api/guidance/violations/$violationId/appeal/review',
-        ),
-        headers: headers,
-        body: jsonEncode({
-          'AppealStatus': appealStatus,
-          'AppealRemarks': appealRemarks,
-        }),
-      );
-      final data = jsonDecode(response.body);
-      return response.statusCode == 200 && data['status'] == 200;
-    } catch (e) {
-      throw Exception('Failed to review appeal: $e');
     }
   }
 
@@ -783,24 +706,6 @@ class DatabaseService {
       return response.statusCode == 200 && data['status'] == 200;
     } catch (e) {
       throw Exception('Failed to review appeal: $e');
-    }
-  }
-
-  // GET /api/guidance/violations/appeals
-  static Future<List<Map<String, dynamic>>> getGuidanceAppeals() async {
-    try {
-      final headers = await _authHeaders();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/guidance/violations/appeals'),
-        headers: headers,
-      );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        return List<Map<String, dynamic>>.from(data['data']);
-      }
-      return [];
-    } catch (e) {
-      throw Exception('Failed to get guidance appeals: $e');
     }
   }
 
@@ -1134,8 +1039,4 @@ class DatabaseService {
       await rejectViolation(violationId);
     }
   }
-
-  // These are kept as no-ops — they are not used by any active UI
-  static Future<void> resolveViolation(String violationId) async {}
-  static Future<void> deleteGuidanceViolation(String violationId) async {}
 }
