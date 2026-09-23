@@ -33,7 +33,6 @@ class _GuardDashboardState extends State<GuardDashboard> {
 
   // Record violation form state (used AFTER scanning)
   String? _selectedViolationType;
-  String _selectedSeverity = 'minor';
 
   Map<String, dynamic> _historyResult = {};
   Map<String, dynamic> _summaryResult = {};
@@ -43,14 +42,11 @@ class _GuardDashboardState extends State<GuardDashboard> {
     'No Uniform',
     'Piercing',
     'Colored Hair',
-    'Late',
-    'Cutting Class',
     'Disruptive Behavior',
     'Vandalism',
     'Prohibited Items',
     'Other',
   ];
-  final List<String> _severities = ['minor', 'moderate', 'major', 'critical'];
 
   @override
   void initState() {
@@ -280,8 +276,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
                                     _scannerActive = false;
                                     _scannedStudentData = {};
                                     _selectedViolationType = null;
-                                    _selectedSeverity = 'minor';
-                                    _remarksController.clear();
+                                                                _remarksController.clear();
                                   });
                                   _loadScannedStudent(value, vp);
                                 }
@@ -1082,7 +1077,7 @@ class _GuardDashboardState extends State<GuardDashboard> {
           Provider.of<AuthProvider>(context, listen: false).currentUser?.name ??
           '',
       remarks: _remarksController.text.trim(),
-      severity: _selectedSeverity,
+      severity: 'minor',
       violationName: _selectedViolationType!,
     );
 
