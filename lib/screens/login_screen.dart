@@ -388,6 +388,7 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _showMfaDialog(AuthProvider authProvider) async {
     final codeController = TextEditingController();
     bool submitting = false;
+    bool useRecoveryCode = false;
     String? error;
     await showDialog<void>(
       context: context,
@@ -410,14 +411,20 @@ class _LoginScreenState extends State<LoginScreen>
                     if (authProvider.manualEntryKey != null) SelectableText('Setup key: ${authProvider.manualEntryKey}'),
                     const SizedBox(height: 18),
                   ] else
-                    const Text('Enter the current six-digit code from your authenticator app. You may also enter one recovery code.'),
+                    Text(useRecoveryCode ? 'Enter one unused recovery code.' : 'Enter the current six-digit code from your authenticator app.'),
                   TextField(
                     controller: codeController,
                     autofocus: true,
-                    keyboardType: TextInputType.number,
+                    keyboardType: useRecoveryCode ? TextInputType.visiblePassword : TextInputType.number,
+                    textCapitalization: useRecoveryCode ? TextCapitalization.characters : TextCapitalization.none,
                     textInputAction: TextInputAction.done,
                     decoration: const InputDecoration(labelText: 'Authenticator or recovery code'),
                   ),
+                  if (!authProvider.requiresAuthenticatorSetup)
+                    Align(alignment: Alignment.centerRight, child: TextButton(
+                      onPressed: () => setDialogState(() { useRecoveryCode = !useRecoveryCode; codeController.clear(); }),
+                      child: Text(useRecoveryCode ? 'Use authenticator code' : 'Use recovery code'),
+                    )),
                   if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
                 ],
               ),
