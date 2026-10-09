@@ -7,7 +7,7 @@
 1. Sign in with username/password.
 2. Follow the API's MFA next step: show authenticator setup QR/manual key during first setup; submit current six-digit code; show recovery codes once with a save/acknowledge step. Later sign-ins request an authenticator code or one recovery code. Do not store recovery codes or authenticator secrets in the app.
 3. Student dashboard offers **Computer Lab**. Guard and SAO navigation remains as it is; the mobile app does not gain LabStaff management.
-4. Student taps **Scan PC**, scans the short-lived QR rendered by the kiosk, and sees the PC's name/location for confirmation.
+4. Student taps **Scan PC**, scans the short-lived QR rendered by the kiosk, and sees the PC's name/location from the API for confirmation before redeeming.
 5. Student enters the one-use voucher, submits both voucher and challenge to the API, and sees success only after the server creates the session.
 6. Active-session screen shows PC, end time/countdown, and **End session**. The app refreshes from the server; local timer is informational, not authoritative.
 7. On expiry/end/rejection, show a clear result and offer to return to the dashboard. Never treat a local QR scan as authorization.
@@ -17,7 +17,7 @@
 - Update `DatabaseService.login` to parse the real MFA response envelope and branch on `data.nextStep`; current source expects `data['token']` and `data['role']` directly and will not handle the new flow.
 - Keep the MFA challenge only in short-lived app state. Send it with the code to `POST /api/auth/mfa/verify`. Persist the JWT only after verification succeeds.
 - Reuse the existing `mobile_scanner` dependency for the lab PC QR. Validate the QR format and avoid scanning repeatedly while a request is in progress.
-- Add typed request/response models and service methods for redeem, active-session lookup, and end-session. Use authenticated API calls and handle 401/403/404/409/429/network errors in plain language.
+- Add typed request/response models and service methods for challenge preview, redeem, active-session lookup, and end-session. Use authenticated API calls and handle 401/403/404/409/429/network errors in plain language.
 - Do not put a voucher in logs, analytics, crash reports, or persistent local storage. Clear it from the text field after the redemption attempt.
 - Do not store the PC agent credential on the phone. The app never communicates directly with a PC.
 
