@@ -22,6 +22,17 @@ class LabPcService {
     return LabPcSession.fromJson(envelope['data'] as Map<String, dynamic>);
   }
 
+  static Future<LabPcChallengePreview> previewChallenge(String challengeId) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/api/labpc/challenges/preview'),
+      headers: await _headers(),
+      body: jsonEncode({'challengeId': challengeId}),
+    );
+    final envelope = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) throw Exception(envelope['message'] ?? 'This PC QR code is no longer valid.');
+    return LabPcChallengePreview.fromJson(envelope['data'] as Map<String, dynamic>);
+  }
+
   static Future<LabPcSession> redeem(String challengeId, String voucherCode) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/api/labpc/sessions/redeem'),
