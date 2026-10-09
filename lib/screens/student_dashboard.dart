@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../providers/auth_provider.dart';
 import '../providers/violation_provider.dart';
 import 'notifications_screen.dart';
+import 'lab_pc_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -24,7 +25,7 @@ class _StudentDashboardState extends State<StudentDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vp = Provider.of<ViolationProvider>(context, listen: false);
       vp.loadMyViolations();
@@ -104,6 +105,7 @@ class _StudentDashboardState extends State<StudentDashboard>
             Tab(icon: Icon(Icons.person_rounded), text: 'Profile'),
             Tab(icon: Icon(Icons.qr_code_rounded), text: 'QR Code'),
             Tab(icon: Icon(Icons.gavel_rounded), text: 'Appeals'),
+            Tab(icon: Icon(Icons.computer_rounded), text: 'Lab PC'),
           ],
         ),
       ),
@@ -114,6 +116,7 @@ class _StudentDashboardState extends State<StudentDashboard>
           _buildProfileTab(),
           _buildQrCodeTab(),
           _buildAppealsTab(),
+          const LabPcScreen(),
         ],
       ),
     );
