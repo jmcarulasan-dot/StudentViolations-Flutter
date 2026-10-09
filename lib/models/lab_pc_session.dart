@@ -21,3 +21,20 @@ class LabPcSession {
     expiresAtUtc: DateTime.tryParse(json['expiresAtUtc']?.toString() ?? '')?.toUtc() ?? DateTime.now().toUtc(),
   );
 }
+class LabPcChallengePreview {
+  final String computerName;
+  final String location;
+  final DateTime expiresAtUtc;
+
+  const LabPcChallengePreview({
+    required this.computerName,
+    required this.location,
+    required this.expiresAtUtc,
+  });
+
+  factory LabPcChallengePreview.fromJson(Map<String, dynamic> json) => LabPcChallengePreview(
+    computerName: json['computerName']?.toString() ?? 'Lab PC',
+    location: json['location']?.toString() ?? '',
+    expiresAtUtc: DateTime.tryParse(json['expiresAtUtc']?.toString() ?? '')?.toUtc() ?? DateTime.now().toUtc(),
+  );
+}
