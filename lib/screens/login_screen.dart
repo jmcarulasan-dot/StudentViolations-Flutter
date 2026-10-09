@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -370,33 +371,126 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  // ── Login logic ──────────────────────────────────────────────────────────────
-  void _login() async {
-    if (_formKey.currentState!.validate()) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.login(
-        _usernameController.text,
-        _passwordController.text,
-      );
+  // ── Login and MFA flow ──────────────────────────────────────────────────────
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    await authProvider.login(_usernameController.text, _passwordController.text);
 
-      if (authProvider.currentUser != null) {
-        await FCMService.registerTokenAfterLogin();
-        if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(authProvider.error ?? 'Login failed'),
-              backgroundColor: _red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        }
-      }
+    if (!mounted) return;
+    if (authProvider.requiresMfa) {
+      await _showMfaDialog(authProvider);
+    } else if (authProvider.error != null) {
+      _showLoginError(authProvider.error!);
     }
+  }
+
+  Future<void> _showMfaDialog(AuthProvider authProvider) async {
+    final codeController = TextEditingController();
+    bool submitting = false;
+    bool useRecoveryCode = false;
+    String? error;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(authProvider.requiresAuthenticatorSetup ? 'Set up your authenticator' : 'Verify your sign-in'),
+          content: SizedBox(
+            width: 380,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (authProvider.requiresAuthenticatorSetup) ...[
+                    const Text('Scan this QR code with your authenticator app. You can enter the setup key manually if needed.'),
+                    const SizedBox(height: 16),
+                    if (authProvider.qrCodeDataUri != null)
+                      Center(child: Image.memory(base64Decode(authProvider.qrCodeDataUri!.split(',').last), width: 210, height: 210)),
+                    if (authProvider.manualEntryKey != null) SelectableText('Setup key: ${authProvider.manualEntryKey}'),
+                    const SizedBox(height: 18),
+                  ] else
+                    Text(useRecoveryCode ? 'Enter one unused recovery code.' : 'Enter the current six-digit code from your authenticator app.'),
+                  TextField(
+                    controller: codeController,
+                    autofocus: true,
+                    keyboardType: useRecoveryCode ? TextInputType.visiblePassword : TextInputType.number,
+                    textCapitalization: useRecoveryCode ? TextCapitalization.characters : TextCapitalization.none,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(labelText: 'Authenticator or recovery code'),
+                  ),
+                  if (!authProvider.requiresAuthenticatorSetup)
+                    Align(alignment: Alignment.centerRight, child: TextButton(
+                      onPressed: () => setDialogState(() { useRecoveryCode = !useRecoveryCode; codeController.clear(); }),
+                      child: Text(useRecoveryCode ? 'Use authenticator code' : 'Use recovery code'),
+                    )),
+                  if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: Colors.red))),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () {
+                authProvider.clearMfaState();
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: submitting ? null : () async {
+                setDialogState(() { submitting = true; error = null; });
+                await authProvider.verifyAuthenticator(codeController.text.trim());
+                if (!mounted) return;
+                if (authProvider.currentUser != null) {
+                  Navigator.pop(dialogContext);
+                  await _finishLogin(authProvider);
+                } else {
+                  setDialogState(() { submitting = false; error = authProvider.error ?? 'Verification failed.'; });
+                }
+              },
+              child: submitting ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Verify'),
+            ),
+          ],
+        ),
+      ),
+    );
+    codeController.dispose();
+  }
+
+  Future<void> _finishLogin(AuthProvider authProvider) async {
+    final codes = authProvider.recoveryCodes;
+    if (codes.isNotEmpty && mounted) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Save your recovery codes'),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('These codes are shown only once. Store them somewhere safe. Each code can be used one time if you cannot access your authenticator.'),
+                const SizedBox(height: 12),
+                SelectableText(codes.join('   '), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              ],
+            ),
+          ),
+          actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('I saved them'))],
+        ),
+      );
+      authProvider.clearRecoveryCodes();
+    }
+    await FCMService.registerTokenAfterLogin();
+    if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+  }
+
+  void _showLoginError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: _red, behavior: SnackBarBehavior.floating),
+    );
   }
 }
