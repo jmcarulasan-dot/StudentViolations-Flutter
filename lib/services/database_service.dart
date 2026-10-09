@@ -8,6 +8,7 @@ import '../models/notification_model.dart';
 
 class DatabaseService {
   static const String _baseUrl = 'http://10.131.40.11:5277';
+  static String get baseUrl => _baseUrl;
 
   static void initialize() {}
 
