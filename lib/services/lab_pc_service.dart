@@ -4,7 +4,7 @@ import 'database_service.dart';
 import '../models/lab_pc_session.dart';
 
 class LabPcService {
-  static const String _baseUrl = 'http://10.131.40.11:5277';
+  static String get _baseUrl => DatabaseService.baseUrl;
 
   static Future<Map<String, String>> _headers() async {
     final token = await DatabaseService.getAccessToken();
