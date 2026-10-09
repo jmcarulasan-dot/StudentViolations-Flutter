@@ -15,7 +15,9 @@ class LabPcScreen extends StatefulWidget {
 class _LabPcScreenState extends State<LabPcScreen> {
   final _voucherController = TextEditingController();
   LabPcSession? _session;
+  LabPcChallengePreview? _pcPreview;
   String? _challenge;
+  bool _confirmedPc = false;
   String? _error;
   bool _loading = true;
   bool _submitting = false;
@@ -49,19 +51,26 @@ class _LabPcScreenState extends State<LabPcScreen> {
     final value = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => const _LabPcScanner()),
     );
-    if (value != null && mounted) setState(() { _challenge = value; _error = null; });
+    if (value == null || !mounted) return;
+    setState(() { _challenge = value; _pcPreview = null; _confirmedPc = false; _error = null; _loading = true; });
+    try {
+      final preview = await LabPcService.previewChallenge(value);
+      if (mounted) setState(() { _pcPreview = preview; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _challenge = null; _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+    }
   }
 
   Future<void> _redeem() async {
-    if (_challenge == null || _voucherController.text.trim().isEmpty) {
-      setState(() => _error = 'Scan the computer QR and enter the voucher from Lab Staff.');
+    if (_challenge == null || _pcPreview == null || !_confirmedPc || _voucherController.text.trim().isEmpty) {
+      setState(() => _error = 'Confirm the computer shown above and enter the voucher from Lab Staff.');
       return;
     }
     setState(() { _submitting = true; _error = null; });
     try {
       final session = await LabPcService.redeem(_challenge!, _voucherController.text.trim());
       if (!mounted) return;
-      setState(() { _session = session; _challenge = null; _voucherController.clear(); });
+      setState(() { _session = session; _challenge = null; _pcPreview = null; _confirmedPc = false; _voucherController.clear(); });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -113,11 +122,27 @@ class _LabPcScreenState extends State<LabPcScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('Start a session', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        OutlinedButton.icon(onPressed: _scanPc, icon: const Icon(Icons.qr_code_scanner), label: Text(_challenge == null ? 'Scan the PC QR code' : 'PC QR scanned')),
+        OutlinedButton.icon(onPressed: _loading ? null : _scanPc, icon: const Icon(Icons.qr_code_scanner), label: Text(_challenge == null ? 'Scan the PC QR code' : 'Scan a different PC')),
+        if (_pcPreview != null) ...[
+          const SizedBox(height: 12),
+          Card(color: Colors.blue.shade50, child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(_pcPreview!.computerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+              Text(_pcPreview!.location),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _confirmedPc,
+                onChanged: (value) => setState(() => _confirmedPc = value ?? false),
+                title: const Text('This is the computer I am using'),
+              ),
+            ]),
+          )),
+        ],
         const SizedBox(height: 12),
         TextField(controller: _voucherController, textCapitalization: TextCapitalization.characters, autocorrect: false, enableSuggestions: false, decoration: const InputDecoration(labelText: 'Voucher code', border: OutlineInputBorder())),
         const SizedBox(height: 14),
-        FilledButton(onPressed: _submitting ? null : _redeem, child: _submitting ? const CircularProgressIndicator() : const Text('Start timed session')),
+        FilledButton(onPressed: _submitting || !_confirmedPc ? null : _redeem, child: _submitting ? const CircularProgressIndicator() : const Text('Start timed session')),
       ]),
     ),
   );
