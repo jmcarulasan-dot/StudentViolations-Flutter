@@ -17,6 +17,8 @@ class DatabaseService {
     return prefs.getString('jwt_token');
   }
 
+  static Future<String?> getAccessToken() => _getToken();
+
   static Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('jwt_token', token);
