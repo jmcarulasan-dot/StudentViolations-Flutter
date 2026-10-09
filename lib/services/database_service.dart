@@ -8,7 +8,6 @@ import '../models/notification_model.dart';
 
 class DatabaseService {
   static const String _baseUrl = 'http://10.131.40.11:5277';
-  static String get baseUrl => _baseUrl;
 
   static void initialize() {}
 
@@ -17,8 +16,6 @@ class DatabaseService {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('jwt_token');
   }
-
-  static Future<String?> getAccessToken() => _getToken();
 
   static Future<void> _saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
