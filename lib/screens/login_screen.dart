@@ -443,7 +443,16 @@ class _LoginScreenState extends State<LoginScreen>
             FilledButton(
               onPressed: submitting ? null : () async {
                 final code = codeController.text.trim();
-                if (!useRecoveryCode && !RegExp(r'^\\d{6}
+                if (!useRecoveryCode && !RegExp(r'^[0-9]{6}$').hasMatch(code)) {
+                  setDialogState(() { error = 'Enter the six-digit code from your authenticator app.'; });
+                  return;
+                }
+                if (useRecoveryCode && code.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').length < 8) {
+                  setDialogState(() { error = 'Enter a valid recovery code.'; });
+                  return;
+                }
+                setDialogState(() { submitting = true; error = null; });
+                await authProvider.verifyAuthenticator(code);
                 if (!mounted) return;
                 if (authProvider.currentUser != null) {
                   Navigator.pop(dialogContext);
