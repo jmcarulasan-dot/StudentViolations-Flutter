@@ -418,7 +418,9 @@ class _LoginScreenState extends State<LoginScreen>
                     keyboardType: useRecoveryCode ? TextInputType.visiblePassword : TextInputType.number,
                     textCapitalization: useRecoveryCode ? TextCapitalization.characters : TextCapitalization.none,
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(labelText: 'Authenticator or recovery code'),
+                    decoration: InputDecoration(
+                      labelText: useRecoveryCode ? 'Recovery code' : '6-digit authenticator code',
+                    ),
                   ),
                   if (!authProvider.requiresAuthenticatorSetup)
                     Align(alignment: Alignment.centerRight, child: TextButton(
@@ -440,8 +442,70 @@ class _LoginScreenState extends State<LoginScreen>
             ),
             FilledButton(
               onPressed: submitting ? null : () async {
+                final code = codeController.text.trim();
+                if (!useRecoveryCode && !RegExp(r'^\\d{6}
+                if (!mounted) return;
+                if (authProvider.currentUser != null) {
+                  Navigator.pop(dialogContext);
+                  await _finishLogin(authProvider);
+                } else {
+                  setDialogState(() { submitting = false; error = authProvider.error ?? 'Verification failed.'; });
+                }
+              },
+              child: submitting ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Verify'),
+            ),
+          ],
+        ),
+      ),
+    );
+    codeController.dispose();
+  }
+
+  Future<void> _finishLogin(AuthProvider authProvider) async {
+    final codes = authProvider.recoveryCodes;
+    if (codes.isNotEmpty && mounted) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('Save your recovery codes'),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('These codes are shown only once. Store them somewhere safe. Each code can be used one time if you cannot access your authenticator.'),
+                const SizedBox(height: 12),
+                SelectableText(codes.join('   '), style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              ],
+            ),
+          ),
+          actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('I saved them'))],
+        ),
+      );
+      authProvider.clearRecoveryCodes();
+    }
+    await FCMService.registerTokenAfterLogin();
+    if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+  }
+
+  void _showLoginError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: _red, behavior: SnackBarBehavior.floating),
+    );
+  }
+}
+).hasMatch(code)) {
+                  setDialogState(() { error = 'Enter the six-digit code from your authenticator app.'; });
+                  return;
+                }
+                if (useRecoveryCode && code.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').length < 8) {
+                  setDialogState(() { error = 'Enter a valid recovery code.'; });
+                  return;
+                }
                 setDialogState(() { submitting = true; error = null; });
-                await authProvider.verifyAuthenticator(codeController.text.trim());
+                await authProvider.verifyAuthenticator(code);
                 if (!mounted) return;
                 if (authProvider.currentUser != null) {
                   Navigator.pop(dialogContext);
