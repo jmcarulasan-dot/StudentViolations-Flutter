@@ -108,8 +108,8 @@ class AuthProvider with ChangeNotifier {
   Future<void> register({
     required String username,
     required String password,
-    required String name,
-    required UserRole role,
+    required String firstName,
+    required String lastName,
     String? email,
     String? address,
     String? contactNumber,
@@ -124,11 +124,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      _currentUser = null;
       final result = await DatabaseService.register(
         username: username,
         password: password,
-        name: name,
-        role: role,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         address: address,
         contactNumber: contactNumber,
@@ -140,7 +141,9 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _currentUser = result['user'] as User;
+        // Registration creates a pending request. Admissions approval is
+        // required before the student can sign in, so no session is created.
+        _currentUser = null;
         _error = null;
       } else {
         _currentUser = null;
@@ -216,3 +219,4 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+
