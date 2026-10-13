@@ -7,9 +7,41 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.131.40.11:5277';
+  // API host currently used by the web client on the local network.
+  static const String _baseUrl = 'http://192.168.1.9:5277';
 
   static void initialize() {}
+
+  static Map<String, dynamic> _decodeResponse(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  static String _responseError(http.Response response, String fallback) {
+    final body = _decodeResponse(response);
+    for (final key in ['message', 'Message', 'detail', 'title']) {
+      final value = body[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+
+    final errors = body['errors'];
+    if (errors is Map) {
+      final messages = <String>[];
+      for (final value in errors.values) {
+        if (value is List) {
+          messages.addAll(value.whereType<String>().where((v) => v.trim().isNotEmpty));
+        } else if (value is String && value.trim().isNotEmpty) {
+          messages.add(value.trim());
+        }
+      }
+      if (messages.isNotEmpty) return messages.join(' ');
+    }
+
+    return '$fallback (HTTP ${response.statusCode}).';
+  }
 
   // ── Token helpers ────────────────────────────────────────────────────────────
   static Future<String?> _getToken() async {
@@ -63,47 +95,77 @@ class DatabaseService {
 
   // ── AUTH ─────────────────────────────────────────────────────────────────────
 
-  // POST /api/auth/login
-  static Future<Map<String, dynamic>?> login(
-    String username,
-    String password,
-  ) async {
+  // POST /api/auth/login. The API returns an MFA challenge before a JWT.
+  static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data['status'] == 200) {
-        await _saveToken(data['token']);
-        await _saveStudentNo('');
-        await _saveTokenToBackend();
-
-        final decodedToken = _decodeJwt(data['token']);
-        final name = decodedToken['name']?.toString() ?? username;
-        final id =
-            decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
-                ?.toString() ??
-            '';
-        final studentNo = decodedToken['studentNo']?.toString() ?? '';
-        final roleStr = (data['role'] as String).toLowerCase();
-
-        return {
-          'user': User(
-            id: id,
-            username: username,
-            password: '',
-            name: name,
-            role: _parseRole(roleStr),
-            studentNo: studentNo,
-          ),
-        };
+      final envelope = _decodeResponse(response);
+      if (response.statusCode != 200) {
+        return {'error': _responseError(response, 'Login failed.')};
       }
-      // return the API's actual message
-      return {'error': data['message'] ?? 'Invalid username or password'};
+      final rawFlow = envelope['data'];
+      final flow = rawFlow is Map
+          ? Map<String, dynamic>.from(rawFlow)
+          : <String, dynamic>{};
+      return {'flow': flow};
     } catch (e) {
-      throw Exception('Login failed: $e');
+      return {'error': 'Cannot connect to the SVS server.'};
+    }
+  }
+
+  // POST /api/auth/mfa/verify. Persist credentials only after the API verifies MFA.
+  static Future<Map<String, dynamic>> verifyAuthenticator({
+    required String challengeId,
+    required String code,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/auth/mfa/verify'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'challengeId': challengeId, 'code': code}),
+      );
+      final envelope = _decodeResponse(response);
+      if (response.statusCode != 200) {
+        return {'error': _responseError(response, 'Authenticator verification failed.')};
+      }
+      final rawFlow = envelope['data'];
+      final flow = rawFlow is Map
+          ? Map<String, dynamic>.from(rawFlow)
+          : <String, dynamic>{};
+      final token = flow['token']?.toString();
+      final role = flow['role']?.toString().trim().toLowerCase();
+      if (token == null || role == null) {
+        return {'error': 'The server did not return a completed sign-in.'};
+      }
+      if (role != 'student' && role != 'guard') {
+        return {'error': 'This mobile app is for student and guard accounts.'};
+      }
+
+      final claims = _decodeJwt(token);
+      if (claims.isEmpty) {
+        return {'error': 'The server returned an invalid sign-in token.'};
+      }
+      final user = User(
+        id: claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '',
+        username: claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']?.toString() ?? '',
+        password: '',
+        name: claims['name']?.toString() ?? '',
+        role: role == 'guard' ? UserRole.guard : UserRole.student,
+        studentNo: claims['studentNo']?.toString() ?? '',
+        token: token,
+      );
+
+      // Persist a session only after validating both the role and token.
+      await _saveToken(token);
+      await _saveStudentNo(user.studentNo ?? '');
+      await _saveTokenToBackend();
+      return {'user': user, 'recoveryCodes': flow['recoveryCodes'] ?? <String>[]};
+    } catch (_) {
+      return {'error': 'Cannot connect to the SVS server.'};
     }
   }
 
@@ -130,8 +192,8 @@ class DatabaseService {
   static Future<Map<String, dynamic>> register({
     required String username,
     required String password,
-    required String name,
-    required UserRole role,
+    required String firstName,
+    required String lastName,
     String? gradeSection,
     String? contactNumber,
     String? studentNo,
@@ -148,57 +210,51 @@ class DatabaseService {
         yearNum = year.replaceAll(RegExp(r'[^0-9]'), '');
       }
 
-      final nameParts = name.trim().split(' ');
-      final firstName = nameParts.first;
-      final lastName = nameParts.length > 1
-          ? nameParts.skip(1).join(' ')
-          : firstName;
-
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
           'password': password,
-          'firstName': firstName,
-          'lastName': lastName,
-          'email': email ?? '$username@aclc.com',
+          'firstName': firstName.trim(),
+          'lastName': lastName.trim(),
+          'email': email,
           'gender': (gender ?? 'male').toLowerCase(),
           'dateOfBirth': dateOfBirth ?? '2000-01-01',
           'address': address ?? '',
-          'number': contactNumber ?? '',
-          'role': role.name,
+          'contactNumber': contactNumber ?? '',
           'course': course,
           'year': yearNum,
           'studentNo': studentNo,
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _decodeResponse(response);
+      final status = data['status'];
+      final successfulHttpStatus =
+          response.statusCode >= 200 && response.statusCode < 300;
+      final successfulApiStatus = status == null ||
+          (status is num && status >= 200 && status < 300);
 
-      if (response.statusCode == 200 && data['status'] == 200) {
+      if (successfulHttpStatus && successfulApiStatus) {
+        final message = data['message'];
         return {
           'success': true,
-          'user': User(
-            id: '',
-            username: username,
-            password: '',
-            name: name,
-            role: role,
-            contactNumber: contactNumber,
-            studentNo: studentNo,
-          ),
+          'message': message is String && message.trim().isNotEmpty
+              ? message
+              : 'Registration request submitted. Wait for Admissions approval.',
         };
       }
 
       return {
         'success': false,
-        'message': data['message'] ?? 'Registration failed. Please try again.',
+        'message': _responseError(response, 'Registration was rejected.'),
       };
-    } catch (e) {
+    } catch (_) {
       return {
         'success': false,
-        'message': 'Network error. Please check your connection.',
+        'message':
+            'Could not connect to the SVS server. Check the server address and connection.',
       };
     }
   }
@@ -325,24 +381,31 @@ class DatabaseService {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/guard/student/validate?studentNo=$studentNo'),
+        Uri.parse('$_baseUrl/api/guard/student/validate').replace(
+          queryParameters: {'studentNo': studentNo.trim().toUpperCase()},
+        ),
         headers: headers,
       );
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200 && data['status'] == 200) {
-        final d = data['data'];
+        final d = data['data'] as Map<String, dynamic>? ?? {};
         return {
           'student_no': d['student_no'],
           'name': d['name'],
+          'course': d['course'],
+          'year': d['year'],
           'violation_count': d['violation_count'],
           'warning_level': d['warning_level'],
           'violations': d['violations'] ?? [],
           'profile_photo': d['profile_photo'] ?? '',
         };
       }
-      return null;
+      throw Exception(data['message'] ?? 'Student not found.');
     } catch (e) {
-      throw Exception('Failed to validate student: $e');
+      final message = e.toString().replaceFirst('Exception: ', '');
+      throw Exception(message.startsWith('Failed to validate student:')
+          ? message
+          : 'Failed to validate student: $message');
     }
   }
 
@@ -973,3 +1036,4 @@ class DatabaseService {
     }
   }
 }
+

@@ -7,7 +7,6 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/guard_dashboard.dart';
 import 'screens/student_dashboard.dart';
-import 'screens/sao_dashboard.dart';
 import 'models/user.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -297,8 +296,6 @@ class DashboardWrapper extends StatelessWidget {
             return const GuardDashboard();
           case UserRole.student:
             return const StudentDashboard();
-          case UserRole.sao:
-            return const SAODashboard();
           default:
             return const LoginScreen();
         }
@@ -306,3 +303,4 @@ class DashboardWrapper extends StatelessWidget {
     );
   }
 }
+

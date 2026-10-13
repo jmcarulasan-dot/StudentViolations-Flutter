@@ -175,12 +175,17 @@ class ViolationProvider with ChangeNotifier {
   Future<void> validateStudent(String studentNo) async {
     _setLoading(true);
     _error = null;
+    _validatedStudent = {};
     try {
       final result = await DatabaseService.validateStudent(studentNo);
       _validatedStudent = result ?? {};
+      if (_validatedStudent.isEmpty) {
+        _error = 'Student not found.';
+      }
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to validate student: ${e.toString()}';
+      _validatedStudent = {};
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
     } finally {
       _setLoading(false);
@@ -213,7 +218,6 @@ class ViolationProvider with ChangeNotifier {
         severity: severity ?? 'minor',
       );
       await DatabaseService.addViolation(violation);
-      await loadStudents();
       notifyListeners();
     } catch (e) {
       _error = 'Failed to record violation: ${e.toString()}';
@@ -428,7 +432,8 @@ class ViolationProvider with ChangeNotifier {
     } else if (status == ViolationStatus.cleared) {
       await rejectViolation(violationId);
     } else {
-      await resolveViolation(violationId);
+      _error = 'This violation status is not supported in the mobile app.';
+      notifyListeners();
     }
   }
 
@@ -436,7 +441,7 @@ class ViolationProvider with ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      await DatabaseService.warnStudent(studentNo);
+      _error = 'Student warnings are managed from the web dashboard.';
       notifyListeners();
     } catch (e) {
       _error = 'Failed to warn student: ${e.toString()}';
@@ -653,3 +658,4 @@ class ViolationProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+

@@ -7,42 +7,109 @@ class AuthProvider with ChangeNotifier {
   User? _currentUser;
   bool _isLoading = false;
   String? _error;
+  String? _mfaChallengeId;
+  String? _authenticatorUri;
+  String? _qrCodeDataUri;
+  String? _manualEntryKey;
+  bool _requiresAuthenticatorSetup = false;
+  List<String> _recoveryCodes = const [];
 
   User? get currentUser => _currentUser;
+  String? get mfaChallengeId => _mfaChallengeId;
+  String? get authenticatorUri => _authenticatorUri;
+  String? get qrCodeDataUri => _qrCodeDataUri;
+  String? get manualEntryKey => _manualEntryKey;
+  bool get requiresAuthenticatorSetup => _requiresAuthenticatorSetup;
+  List<String> get recoveryCodes => List.unmodifiable(_recoveryCodes);
+  bool get requiresMfa => _mfaChallengeId != null;
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isAuthenticated => _currentUser != null;
 
-  //LOGIN
+  // Password step: keep the returned challenge in memory and do not authenticate yet.
   Future<void> login(String username, String password) async {
     _setLoading(true);
     _error = null;
-
+    _currentUser = null;
+    _mfaChallengeId = null;
+    _authenticatorUri = null;
+    _qrCodeDataUri = null;
+    _manualEntryKey = null;
+    _requiresAuthenticatorSetup = false;
+    _recoveryCodes = const [];
     try {
       final result = await DatabaseService.login(username, password);
-
-      if (result != null && result['user'] != null) {
-        _currentUser = result['user'] as User;
-        await _saveSession(_currentUser!);
-        notifyListeners();
+      if (result['error'] != null) {
+        _error = result['error'].toString();
       } else {
-        _error = result?['error'] ?? 'Invalid username or password';
-        notifyListeners();
+        final flow = result['flow'] as Map<String, dynamic>? ?? {};
+        _mfaChallengeId = flow['challengeId']?.toString();
+        _authenticatorUri = flow['authenticatorUri']?.toString();
+        _qrCodeDataUri = flow['qrCodeDataUri']?.toString();
+        _manualEntryKey = flow['manualEntryKey']?.toString();
+        // Match the API's actual response fields: requiresAuthenticatorSetup and
+        // requiresAuthenticatorCode. There is no "nextStep" field in this contract.
+        _requiresAuthenticatorSetup = flow['requiresAuthenticatorSetup'] == true;
+        final requiresAuthenticatorCode = flow['requiresAuthenticatorCode'] == true;
+        if (_mfaChallengeId == null || _mfaChallengeId!.isEmpty) {
+          _error = 'The server did not return an MFA challenge.';
+        } else if (!_requiresAuthenticatorSetup && !requiresAuthenticatorCode) {
+          _error = 'The server did not return a valid authenticator sign-in request.';
+          _mfaChallengeId = null;
+        }
       }
-    } catch (e) {
-      _error = 'Login failed: ${e.toString()}';
-      notifyListeners();
+    } catch (_) {
+      _error = 'Login failed. Please try again.';
     } finally {
       _setLoading(false);
+      notifyListeners();
     }
+  }
+
+  Future<void> verifyAuthenticator(String code) async {
+    final challenge = _mfaChallengeId;
+    if (challenge == null) { _error = 'Sign in again to get a new verification request.'; notifyListeners(); return; }
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await DatabaseService.verifyAuthenticator(challengeId: challenge, code: code);
+      if (result['user'] is User) {
+        _currentUser = result['user'] as User;
+        _recoveryCodes = ((result['recoveryCodes'] as List?) ?? const []).map((value) => value.toString()).toList();
+        await _saveSession(_currentUser!);
+        _mfaChallengeId = null;
+      } else {
+        _error = result['error']?.toString() ?? 'Authenticator verification failed.';
+      }
+    } catch (_) {
+      _error = 'Authenticator verification failed. Please try again.';
+    } finally {
+      _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  void clearMfaState() {
+    _mfaChallengeId = null;
+    _authenticatorUri = null;
+    _qrCodeDataUri = null;
+    _manualEntryKey = null;
+    _requiresAuthenticatorSetup = false;
+    _error = null;
+    notifyListeners();
+  }
+
+  void clearRecoveryCodes() {
+    _recoveryCodes = const [];
+    notifyListeners();
   }
 
   // REGISTER
   Future<void> register({
     required String username,
     required String password,
-    required String name,
-    required UserRole role,
+    required String firstName,
+    required String lastName,
     String? email,
     String? address,
     String? contactNumber,
@@ -57,11 +124,12 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      _currentUser = null;
       final result = await DatabaseService.register(
         username: username,
         password: password,
-        name: name,
-        role: role,
+        firstName: firstName,
+        lastName: lastName,
         email: email,
         address: address,
         contactNumber: contactNumber,
@@ -73,7 +141,9 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _currentUser = result['user'] as User;
+        // Registration creates a pending request. Admissions approval is
+        // required before the student can sign in, so no session is created.
+        _currentUser = null;
         _error = null;
       } else {
         _currentUser = null;
@@ -91,6 +161,8 @@ class AuthProvider with ChangeNotifier {
   // LOGOUT
   Future<void> logout() async {
     _currentUser = null;
+    clearMfaState();
+    _recoveryCodes = const [];
     await DatabaseService.clearToken();
     await _clearSession();
     notifyListeners();
@@ -147,3 +219,4 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+

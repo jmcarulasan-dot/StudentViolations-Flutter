@@ -15,7 +15,8 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -41,10 +42,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final List<Map<String, String>> _courses = [
     {'label': 'BSIT', 'value': 'BSIT'},
-    {'label': 'BSHM', 'value': 'BSHM'},
+    {'label': 'BSA', 'value': 'BSA'},
     {'label': 'BSBA', 'value': 'BSBA'},
     {'label': 'BSCS', 'value': 'BSCS'},
-    {'label': 'BSA', 'value': 'BSA'},
+    {'label': 'BSHM', 'value': 'BSHM'},
   ];
 
   final List<Map<String, String>> _genders = [
@@ -54,7 +55,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -182,6 +184,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+
+                            _sectionLabel('Personal Information'),
+                            const SizedBox(height: 10),
+                            _buildTextField(
+                              controller: _firstNameController,
+                              label: 'First Name',
+                              icon: Icons.person_outline_rounded,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Please enter your first name'
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              controller: _lastNameController,
+                              label: 'Last Name',
+                              icon: Icons.person_outline_rounded,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? 'Please enter your last name'
+                                  : null,
+                            ),
+                            const SizedBox(height: 20),
 
                             // Gender — required for ALL roles
                             DropdownButtonFormField<String>(
@@ -334,6 +357,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(height: 16),
 
                             _buildTextField(
+                              controller: _emailController,
+                              label: 'Email Address',
+                              icon: Icons.email_outlined,
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                final email = v?.trim() ?? '';
+                                if (email.isEmpty) return 'Please enter your email address';
+                                if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+                                  return 'Enter a valid email address, such as name@example.com';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+
+                            _buildTextField(
                               controller: _passwordController,
                               label: 'Password',
                               icon: Icons.lock_outline_rounded,
@@ -399,8 +438,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 icon: Icons.badge_outlined,
                                 hint: 'e.g. C26-01-0001-MAN121',
                                 validator: (v) {
-                                  if (v == null || v.isEmpty)
+                                  final studentNo = v?.trim() ?? '';
+                                  if (studentNo.isEmpty)
                                     return 'Please enter your student number';
+                                  if (!RegExp(r'^[A-Za-z0-9]{3}-\d{2}-\d{4}-[A-Za-z0-9]{6}$').hasMatch(studentNo)) {
+                                    return 'Use the format ABC-00-0000-ABC123';
+                                  }
                                   return null;
                                 },
                               ),
@@ -574,8 +617,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await authProvider.register(
         username: _usernameController.text.trim(),
         password: _passwordController.text,
-        name: _nameController.text.trim(),
-        role: _selectedRole,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         email: _emailController.text.trim(),
         address: _addressController.text.trim(),
         gender: _selectedGender!,
@@ -588,14 +631,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         year: _selectedRole == UserRole.student ? _selectedYear : null,
       );
 
-      if (authProvider.currentUser != null) {
-        // Logout immediately after register — user must login manually
-        await authProvider.logout();
-
+      if (authProvider.error == null) {
         if (mounted) {
           // Clear all fields
           _formKey.currentState!.reset();
-          _nameController.clear();
+          _firstNameController.clear();
+          _lastNameController.clear();
           _usernameController.clear();
           _emailController.clear();
           _passwordController.clear();
@@ -622,7 +663,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   SizedBox(width: 8),
                   Text(
-                    'Registration successful! Please log in.',
+                    'Request submitted. Wait for Admissions approval.',
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
@@ -771,3 +812,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 }
+
