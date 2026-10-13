@@ -7,7 +7,8 @@ import '../models/violation.dart';
 import '../models/notification_model.dart';
 
 class DatabaseService {
-  static const String _baseUrl = 'http://10.131.40.11:5277';
+  // API host currently used by the web client on the local network.
+  static const String _baseUrl = 'http://192.168.1.9:5277';
 
   static void initialize() {}
 
@@ -99,24 +100,32 @@ class DatabaseService {
       }
       final flow = envelope['data'] as Map<String, dynamic>? ?? {};
       final token = flow['token']?.toString();
-      final role = flow['role']?.toString();
+      final role = flow['role']?.toString().trim().toLowerCase();
       if (token == null || role == null) {
         return {'error': 'The server did not return a completed sign-in.'};
       }
+      if (role != 'student' && role != 'guard') {
+        return {'error': 'This mobile app is for student and guard accounts.'};
+      }
 
-      await _saveToken(token);
-      await _saveStudentNo('');
-      await _saveTokenToBackend();
       final claims = _decodeJwt(token);
+      if (claims.isEmpty) {
+        return {'error': 'The server returned an invalid sign-in token.'};
+      }
       final user = User(
         id: claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']?.toString() ?? '',
         username: claims['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']?.toString() ?? '',
         password: '',
         name: claims['name']?.toString() ?? '',
-        role: _parseRole(role.toLowerCase()),
+        role: role == 'guard' ? UserRole.guard : UserRole.student,
         studentNo: claims['studentNo']?.toString() ?? '',
         token: token,
       );
+
+      // Persist a session only after validating both the role and token.
+      await _saveToken(token);
+      await _saveStudentNo(user.studentNo ?? '');
+      await _saveTokenToBackend();
       return {'user': user, 'recoveryCodes': flow['recoveryCodes'] ?? <String>[]};
     } catch (_) {
       return {'error': 'Cannot connect to the SVS server.'};
