@@ -175,12 +175,17 @@ class ViolationProvider with ChangeNotifier {
   Future<void> validateStudent(String studentNo) async {
     _setLoading(true);
     _error = null;
+    _validatedStudent = {};
     try {
       final result = await DatabaseService.validateStudent(studentNo);
       _validatedStudent = result ?? {};
+      if (_validatedStudent.isEmpty) {
+        _error = 'Student not found.';
+      }
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to validate student: ${e.toString()}';
+      _validatedStudent = {};
+      _error = e.toString().replaceFirst('Exception: ', '');
       notifyListeners();
     } finally {
       _setLoading(false);
@@ -213,7 +218,6 @@ class ViolationProvider with ChangeNotifier {
         severity: severity ?? 'minor',
       );
       await DatabaseService.addViolation(violation);
-      await loadStudents();
       notifyListeners();
     } catch (e) {
       _error = 'Failed to record violation: ${e.toString()}';
@@ -653,3 +657,4 @@ class ViolationProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+
