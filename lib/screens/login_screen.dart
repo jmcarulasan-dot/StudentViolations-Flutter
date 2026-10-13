@@ -390,7 +390,7 @@ class _LoginScreenState extends State<LoginScreen>
     bool submitting = false;
     bool useRecoveryCode = false;
     String? error;
-    await showDialog<void>(
+    final verified = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
@@ -455,8 +455,7 @@ class _LoginScreenState extends State<LoginScreen>
                 await authProvider.verifyAuthenticator(code);
                 if (!mounted) return;
                 if (authProvider.currentUser != null) {
-                  Navigator.pop(dialogContext);
-                  await _finishLogin(authProvider);
+                  Navigator.pop(dialogContext, true);
                 } else {
                   setDialogState(() { submitting = false; error = authProvider.error ?? 'Verification failed.'; });
                 }
@@ -468,6 +467,9 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
     codeController.dispose();
+    if (verified == true && mounted) {
+      await _finishLogin(authProvider);
+    }
   }
 
   Future<void> _finishLogin(AuthProvider authProvider) async {
