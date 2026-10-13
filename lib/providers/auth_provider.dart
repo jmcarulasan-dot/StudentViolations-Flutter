@@ -32,6 +32,10 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     _currentUser = null;
     _mfaChallengeId = null;
+    _authenticatorUri = null;
+    _qrCodeDataUri = null;
+    _manualEntryKey = null;
+    _requiresAuthenticatorSetup = false;
     _recoveryCodes = const [];
     try {
       final result = await DatabaseService.login(username, password);
@@ -43,8 +47,16 @@ class AuthProvider with ChangeNotifier {
         _authenticatorUri = flow['authenticatorUri']?.toString();
         _qrCodeDataUri = flow['qrCodeDataUri']?.toString();
         _manualEntryKey = flow['manualEntryKey']?.toString();
-        _requiresAuthenticatorSetup = flow['nextStep'] == 'setupAuthenticator';
-        if (_mfaChallengeId == null) _error = 'The server did not return an MFA challenge.';
+        // Match the API's actual response fields: requiresAuthenticatorSetup and
+        // requiresAuthenticatorCode. There is no "nextStep" field in this contract.
+        _requiresAuthenticatorSetup = flow['requiresAuthenticatorSetup'] == true;
+        final requiresAuthenticatorCode = flow['requiresAuthenticatorCode'] == true;
+        if (_mfaChallengeId == null || _mfaChallengeId!.isEmpty) {
+          _error = 'The server did not return an MFA challenge.';
+        } else if (!_requiresAuthenticatorSetup && !requiresAuthenticatorCode) {
+          _error = 'The server did not return a valid authenticator sign-in request.';
+          _mfaChallengeId = null;
+        }
       }
     } catch (_) {
       _error = 'Login failed. Please try again.';
