@@ -432,7 +432,8 @@ class ViolationProvider with ChangeNotifier {
     } else if (status == ViolationStatus.cleared) {
       await rejectViolation(violationId);
     } else {
-      await resolveViolation(violationId);
+      _error = 'This violation status is not supported in the mobile app.';
+      notifyListeners();
     }
   }
 
@@ -440,7 +441,7 @@ class ViolationProvider with ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      await DatabaseService.warnStudent(studentNo);
+      _error = 'Student warnings are managed from the web dashboard.';
       notifyListeners();
     } catch (e) {
       _error = 'Failed to warn student: ${e.toString()}';
