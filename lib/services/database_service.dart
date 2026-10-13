@@ -12,6 +12,37 @@ class DatabaseService {
 
   static void initialize() {}
 
+  static Map<String, dynamic> _decodeResponse(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  static String _responseError(http.Response response, String fallback) {
+    final body = _decodeResponse(response);
+    for (final key in ['message', 'Message', 'detail', 'title']) {
+      final value = body[key];
+      if (value is String && value.trim().isNotEmpty) return value.trim();
+    }
+
+    final errors = body['errors'];
+    if (errors is Map) {
+      final messages = <String>[];
+      for (final value in errors.values) {
+        if (value is List) {
+          messages.addAll(value.whereType<String>().where((v) => v.trim().isNotEmpty));
+        } else if (value is String && value.trim().isNotEmpty) {
+          messages.add(value.trim());
+        }
+      }
+      if (messages.isNotEmpty) return messages.join(' ');
+    }
+
+    return '$fallback (HTTP ${response.statusCode}).';
+  }
+
   // ── Token helpers ────────────────────────────────────────────────────────────
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -72,11 +103,14 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
-      final envelope = jsonDecode(response.body) as Map<String, dynamic>;
+      final envelope = _decodeResponse(response);
       if (response.statusCode != 200) {
-        return {'error': envelope['message'] ?? 'Login failed.'};
+        return {'error': _responseError(response, 'Login failed.')};
       }
-      final flow = envelope['data'] as Map<String, dynamic>? ?? {};
+      final rawFlow = envelope['data'];
+      final flow = rawFlow is Map
+          ? Map<String, dynamic>.from(rawFlow)
+          : <String, dynamic>{};
       return {'flow': flow};
     } catch (e) {
       return {'error': 'Cannot connect to the SVS server.'};
@@ -94,11 +128,14 @@ class DatabaseService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'challengeId': challengeId, 'code': code}),
       );
-      final envelope = jsonDecode(response.body) as Map<String, dynamic>;
+      final envelope = _decodeResponse(response);
       if (response.statusCode != 200) {
-        return {'error': envelope['message'] ?? 'Authenticator verification failed.'};
+        return {'error': _responseError(response, 'Authenticator verification failed.')};
       }
-      final flow = envelope['data'] as Map<String, dynamic>? ?? {};
+      final rawFlow = envelope['data'];
+      final flow = rawFlow is Map
+          ? Map<String, dynamic>.from(rawFlow)
+          : <String, dynamic>{};
       final token = flow['token']?.toString();
       final role = flow['role']?.toString().trim().toLowerCase();
       if (token == null || role == null) {
@@ -192,24 +229,32 @@ class DatabaseService {
         }),
       );
 
-      final data = jsonDecode(response.body);
+      final data = _decodeResponse(response);
+      final status = data['status'];
+      final successfulHttpStatus =
+          response.statusCode >= 200 && response.statusCode < 300;
+      final successfulApiStatus = status == null ||
+          (status is num && status >= 200 && status < 300);
 
-      if (response.statusCode == 200 && data['status'] == 200) {
+      if (successfulHttpStatus && successfulApiStatus) {
+        final message = data['message'];
         return {
           'success': true,
-          'message': data['message'] ??
-              'Registration request submitted. Wait for Admissions approval.',
+          'message': message is String && message.trim().isNotEmpty
+              ? message
+              : 'Registration request submitted. Wait for Admissions approval.',
         };
       }
 
       return {
         'success': false,
-        'message': data['message'] ?? 'Registration failed. Please try again.',
+        'message': _responseError(response, 'Registration was rejected.'),
       };
-    } catch (e) {
+    } catch (_) {
       return {
         'success': false,
-        'message': 'Network error. Please check your connection.',
+        'message':
+            'Could not connect to the SVS server. Check the server address and connection.',
       };
     }
   }
