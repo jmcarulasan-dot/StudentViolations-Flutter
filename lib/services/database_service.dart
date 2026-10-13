@@ -155,8 +155,8 @@ class DatabaseService {
   static Future<Map<String, dynamic>> register({
     required String username,
     required String password,
-    required String name,
-    required UserRole role,
+    required String firstName,
+    required String lastName,
     String? gradeSection,
     String? contactNumber,
     String? studentNo,
@@ -173,26 +173,19 @@ class DatabaseService {
         yearNum = year.replaceAll(RegExp(r'[^0-9]'), '');
       }
 
-      final nameParts = name.trim().split(' ');
-      final firstName = nameParts.first;
-      final lastName = nameParts.length > 1
-          ? nameParts.skip(1).join(' ')
-          : firstName;
-
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
           'password': password,
-          'firstName': firstName,
-          'lastName': lastName,
-          'email': email ?? '$username@aclc.com',
+          'firstName': firstName.trim(),
+          'lastName': lastName.trim(),
+          'email': email,
           'gender': (gender ?? 'male').toLowerCase(),
           'dateOfBirth': dateOfBirth ?? '2000-01-01',
           'address': address ?? '',
-          'number': contactNumber ?? '',
-          'role': role.name,
+          'contactNumber': contactNumber ?? '',
           'course': course,
           'year': yearNum,
           'studentNo': studentNo,
@@ -204,15 +197,8 @@ class DatabaseService {
       if (response.statusCode == 200 && data['status'] == 200) {
         return {
           'success': true,
-          'user': User(
-            id: '',
-            username: username,
-            password: '',
-            name: name,
-            role: role,
-            contactNumber: contactNumber,
-            studentNo: studentNo,
-          ),
+          'message': data['message'] ??
+              'Registration request submitted. Wait for Admissions approval.',
         };
       }
 
@@ -350,24 +336,31 @@ class DatabaseService {
     try {
       final headers = await _authHeaders();
       final response = await http.get(
-        Uri.parse('$_baseUrl/api/guard/student/validate?studentNo=$studentNo'),
+        Uri.parse('$_baseUrl/api/guard/student/validate').replace(
+          queryParameters: {'studentNo': studentNo.trim().toUpperCase()},
+        ),
         headers: headers,
       );
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 200 && data['status'] == 200) {
-        final d = data['data'];
+        final d = data['data'] as Map<String, dynamic>? ?? {};
         return {
           'student_no': d['student_no'],
           'name': d['name'],
+          'course': d['course'],
+          'year': d['year'],
           'violation_count': d['violation_count'],
           'warning_level': d['warning_level'],
           'violations': d['violations'] ?? [],
           'profile_photo': d['profile_photo'] ?? '',
         };
       }
-      return null;
+      throw Exception(data['message'] ?? 'Student not found.');
     } catch (e) {
-      throw Exception('Failed to validate student: $e');
+      final message = e.toString().replaceFirst('Exception: ', '');
+      throw Exception(message.startsWith('Failed to validate student:')
+          ? message
+          : 'Failed to validate student: $message');
     }
   }
 
@@ -998,3 +991,4 @@ class DatabaseService {
     }
   }
 }
+
